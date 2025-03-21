@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>季风决策者</title>
+    <link rel="icon" href="./f.ico">
+    <style>
+        :root {
+            --flood-color: #006994;
+            --drought-color: #8B4513;
+            --primary-bg: #f0f8ff;
+            --secondary-bg: #fff;
+            --accent-color: #4682B4;
+            --policy-bg: #fff9e6;
+            --policy-border: #ffd700;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--primary-bg);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 20px;
+            width: 100%;
+        }
+
+        #map {
+            height: 250px;
+            background: linear-gradient(160deg, #4d7c3f 0%, #87CEEB 100%);
+            border-radius: 10px;
+            transition: all 0.5s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .satellite-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: 40px 40px;
+            opacity: 0.7;
+        }
+
+        .policy-card {
+            background: var(--policy-bg);
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 5px solid var(--policy-border);
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .history-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+
+        @keyframes flood-pulse {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 40px 40px;
+            }
+        }
+
+        @keyframes drought-pulse {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 40px -40px;
+            }
+        }
+
+        .flood-effect {
+            background-image: linear-gradient(45deg,
+                    var(--flood-color) 25%,
+                    transparent 25%,
+                    transparent 50%,
+                    var(--flood-color) 50%,
+                    var(--flood-color) 75%,
+                    transparent 75%);
+            animation: flood-pulse 2s linear infinite;
+        }
+
+        .drought-effect {
+            background-image: linear-gradient(45deg,
+                    var(--drought-color) 25%,
+                    transparent 25%,
+                    transparent 50%,
+                    var(--drought-color) 50%,
+                    var(--drought-color) 75%,
+                    transparent 75%);
+            animation: drought-pulse 2s linear infinite;
+        }
+
+        button {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #356a93;
+        }
+
+        #log {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: var(--secondary-bg);
+            border-radius: 5px;
+        }
+
+        #target-money-setting {
+            margin-bottom: 20px;
+        }
+
+        #location-info {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+
+        /* 弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grid-container">
+        <!-- 主游戏区 -->
+        <div>
+            <h1>🌦️ 季风决策者 🚜</h1>
+            <div id="target-money-setting">
+                <label for="target-money">设置目标金钱:</label>
+                <input type="number" id="target-money" value="5000">
+                <button onclick="setTargetMoney()">确定</button>
+            </div>
+            <div id="map"></div>
+
+            <div id="controls">
+                <h3>💰 资金: ₹<span id="money">1000</span></h3>
+                <div id="current-policy" class="policy-card"></div>
+
+                <h3>🌱 选择作物:</h3>
+                <div id="crop-buttons"></div>
+
+                <h3>🛠️ 农业设备:</h3>
+                <div id="equipment-buttons"></div>
+
+                <h3>👷‍♂️ 雇佣劳动力:</h3>
+                <div id="labor-buttons"></div>
+
+                <button onclick="startNewYear()" style="margin:20px 0">⏩ 进入下一年</button>
+            </div>
+
+            <div id="log"></div>
+        </div>
+
+        <!-- 信息面板 -->
+        <div>
+            <h3>📜 当前政策</h3>
+            <div id="policy-effect"></div>
+
+            <h3>📊 历史数据</h3>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>年份</th>
+                        <th>季风</th>
+                        <th>收入</th>
+                        <th>政策</th>
+                        <th>劳动力成本</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body"></tbody>
+            </table>
+
+            <h3>🌍 气候变化指数</h3>
+            <div id="climate-meter">极端天气概率: 15%</div>
+
+            <h3>📚 帮助信息</h3>
+            <div id="help-info">
+                <p>🌱 选择合适的作物，不同作物对季风的适应能力不同。</p>
+                <p>🛠️ 购买农业设备可以提高作物产量。</p>
+                <p>👷‍♂️ 雇佣劳动力能提高工作效率，但会增加成本。</p>
+                <p>📜 政策会影响你的收入和成本，注意应对。</p>
+                <p>🌍 气候变化指数会影响极端天气的概率，注意应对。</p>
+            </div>
+        </div>
+    </div>
+    <div id="location-info">
+        <h3>当前出生地信息</h3>
+        <p id="location-description"></p>
+    </div>
+
+    <!-- 规则弹窗 -->
+    <div id="rules-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeRulesModal()">&times;</span>
+            <h2>游戏规则和机制简介</h2>
+            <p>你将扮演一位农业决策者，在不同的地区经营农场。游戏目标是在10年内积累足够的资金达到设定的目标金钱。</p>
+            <p>1. 选择出生地：游戏开始时，你将随机出生在一个地区，每个地区有不同的气候风险、适合种植的作物和政策。</p>
+            <p>2. 设置目标金钱：在游戏开始时，你可以设置目标金钱，设置后无法重新设置。</p>
+            <p>3. 选择作物：根据所在地区，选择适合种植的作物。不同作物对季风的适应能力不同。</p>
+            <p>4. 购买设备：购买农业设备可以提高作物产量，应对不同的气候灾害。</p>
+            <p>5. 雇佣劳动力：雇佣劳动力能提高工作效率，但会增加成本。</p>
+            <p>6. 应对政策：政府会随机颁布政策，影响你的收入和成本。</p>
+            <p>7. 应对气候变化：随着游戏进行，气候变化指数会上升，极端天气的概率增加。</p>
+            <p>8. 收获收入：每年收获时，根据作物产量、政策和气候变化等因素计算收入。</p>
+            <p>9. 游戏胜利和失败：如果在10年内积累的资金达到或超过目标金钱，游戏胜利；如果资金不足，游戏失败。</p>
+	    <p>（初一四班 王子龙协助制作）</p>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            money: 1000,
+            currentCrop: null,
+            equipment: [],
+            policies: [],
+            history: [],
+            climateRisk: 15,
+            year: 2023,
+            incomeMultiplier: 1,
+            equipmentCost: 1,
+            location: null,
+            labor: 0,
+            laborCost: 0,
+            targetMoney: 5000,
+            targetMoneySet: false
+        };
+
+        const LOCATIONS = [
+            {
+                name: "俄罗斯",
+                climateRisk: 10,
+                monsoonScenarios: [
+                    { type: "正常", yieldFactor: 0.8 },
+                    { type: "低温霜冻", yieldFactor: 0.2 },
+                    { type: "暴雨洪涝", yieldFactor: 0.4 },
+                    { type: "暴雪", yieldFactor: 0.1 },
+                    { type: "极寒", yieldFactor: 0.15 }
+                ],
+                suitableCrops: ["小麦", "大麦", "亚麻"],
+                policies: [
+                    {
+                        name: "农业补贴",
+                        effect: () => gameState.incomeMultiplier *= 1.1,
+                        description: "💸 政府提供农业补贴，收入增加10%"
+                    },
+                    {
+                        name: "技术支持",
+                        effect: () => gameState.equipmentCost = 0.9,
+                        description: "💡 政府提供技术支持，设备价格降低10%"
+                    },
+                    {
+                        name: "土地优惠",
+                        effect: () => gameState.money += 200,
+                        description: "💸 政府给予土地使用优惠，资金增加₹200"
+                    }
+                ],
+                laborCostRate: 20,
+                description: "俄罗斯地域广阔，冬季寒冷漫长，夏季温暖短促。农业主要集中在南部地区，低温霜冻和暴雪等灾害较为常见。由于地广人稀，劳动力成本相对较高。适合种植耐寒的作物，如小麦、大麦和亚麻。"
+            },
+            {
+                name: "东南亚",
+                climateRisk: 20,
+                monsoonScenarios: [
+                    { type: "正常", yieldFactor: 1.2 },
+                    { type: "台风", yieldFactor: 0.3 },
+                    { type: "洪水", yieldFactor: 0.5 },
+                    { type: "泥石流", yieldFactor: 0.2 },
+                    { type: "森林火灾", yieldFactor: 0.35 }
+                ],
+                suitableCrops: ["水稻", "橡胶", "棕榈油"],
+                policies: [
+                    {
+                        name: "出口鼓励",
+                        effect: () => gameState.incomeMultiplier *= 1.3,
+                        description: "🌐 政府鼓励出口，收入增加30%"
+                    },
+                    {
+                        name: "灾害救援",
+                        effect: () => gameState.money += 300,
+                        description: "💸 政府提供灾害救援资金₹300"
+                    },
+                    {
+                        name: "农业培训",
+                        effect: () => gameState.incomeMultiplier *= 1.1,
+                        description: "💡 政府开展农业培训，收入增加10%"
+                    }
+                ],
+                laborCostRate: 10,
+                description: "东南亚地处热带，气候炎热多雨，是世界上重要的水稻、橡胶和棕榈油产区。台风、洪水和泥石流等灾害频繁。劳动力资源丰富，成本相对较低。"
+            },
+            {
+                name: "印度",
+                climateRisk: 25,
+                monsoonScenarios: [
+                    { type: "正常", yieldFactor: 1 },
+                    { type: "干旱", yieldFactor: 0.3 },
+                    { type: "洪水", yieldFactor: 0.5 },
+                    { type: "热浪", yieldFactor: 0.25 },
+                    { type: "蝗虫灾害", yieldFactor: 0.1 }
+                ],
+                suitableCrops: ["水稻", "小麦", "棉花", "甘蔗"],
+                policies: [
+                    {
+                        name: "农业保险补贴",
+                        effect: () => gameState.incomeMultiplier *= 1.15,
+                        description: "💸 政府补贴农业保险，收入增加15%"
+                    },
+                    {
+                        name: "水利建设",
+                        effect: () => gameState.equipmentCost = 0.85,
+                        description: "💡 政府进行水利建设，设备价格降低15%"
+                    },
+                    {
+                        name: "粮食收购",
+                        effect: () => gameState.incomeMultiplier *= 1.2,
+                        description: "🌾 政府高价收购粮食，收入增加20%"
+                    }
+                ],
+                laborCostRate: 5,
+                description: "印度人口众多，劳动力低廉。属于热带季风气候，旱季和雨季分明，干旱、洪水和热浪等灾害时有发生。是重要的农业国家，主要种植水稻、小麦、棉花和甘蔗等作物。"
+            },
+            {
+                name: "中国南方",
+                climateRisk: 22,
+                monsoonScenarios: [
+                    { type: "正常", yieldFactor: 1.1 },
+                    { type: "梅雨洪涝", yieldFactor: 0.4 },
+                    { type: "伏旱", yieldFactor: 0.3 },
+                    { type: "台风", yieldFactor: 0.35 },
+                    { type: "山体滑坡", yieldFactor: 0.2 }
+                ],
+                suitableCrops: ["水稻", "茶叶", "柑橘"],
+                policies: [
+                    {
+                        name: "农业科技创新",
+                        effect: () => gameState.incomeMultiplier *= 1.2,
+                        description: "💡 政府推动农业科技创新，收入增加20%"
+                    },
+                    {
+                        name: "抗旱救灾",
+                        effect: () => gameState.money += 250,
+                        description: "💸 政府提供抗旱救灾资金₹250"
+                    },
+                    {
+                        name: "生态农业补贴",
+                        effect: () => gameState.incomeMultiplier *= 1.1,
+                        description: "🌳 政府补贴生态农业，收入增加10%"
+                    }
+                ],
+                laborCostRate: 15,
+                description: "中国南方气候温暖湿润，雨量充沛，是重要的水稻、茶叶和柑橘产区。梅雨洪涝、伏旱和台风等灾害较为常见。农业科技水平较高，政府注重生态农业发展。"
+            },
+            {
+                name: "中国北方",
+                climateRisk: 18,
+                monsoonScenarios: [
+                    { type: "正常", yieldFactor: 0.9 },
+                    { type: "干旱", yieldFactor: 0.2 },
+                    { type: "暴雨", yieldFactor: 0.5 },
+                    { type: "沙尘暴", yieldFactor: 0.15 },
+                    { type: "寒潮", yieldFactor: 0.2 }
+                ],
+                suitableCrops: ["小麦", "玉米", "大豆"],
+                policies: [
+                    {
+                        name: "节水灌溉推广",
+                        effect: () => gameState.equipmentCost = 0.9,
+                        description: "💡 政府推广节水灌溉，设备价格降低10%"
+                    },
+                    {
+                        name: "农业信贷支持",
+                        effect: () => gameState.money += 200,
+                        description: "💸 政府提供农业信贷支持₹200"
+                    },
+                    {
+                        name: "黑土地保护",
+                        effect: () => gameState.incomeMultiplier *= 1.1,
+                        description: "🌱 政府保护黑土地，收入增加10%"
+                    }
+                ],
+                laborCostRate: 12,
+                description: "中国北方以温带季风气候为主，降水相对较少，干旱和沙尘暴等灾害较为常见。是重要的小麦、玉米和大豆产区，政府重视节水灌溉和黑土地保护。"
+            }
+        ];
+
+        function initGame() {
+            // 显示规则弹窗
+            showRulesModal();
+            const randomIndex = Math.floor(Math.random() * LOCATIONS.length);
+            gameState.location = LOCATIONS[randomIndex];
+            gameState.climateRisk = gameState.location.climateRisk;
+            document.getElementById('climate-meter').textContent = `极端天气概率: ${gameState.climateRisk}%`;
+
+            const cropButtons = document.getElementById('crop-buttons');
+            cropButtons.innerHTML = '';
+            gameState.location.suitableCrops.forEach(crop => {
+                const button = document.createElement('button');
+                button.textContent = `🌾 ${crop}`;
+                button.onclick = () => chooseCrop(crop);
+                cropButtons.appendChild(button);
+            });
+
+            const equipmentButtons = document.getElementById('equipment-buttons');
+            equipmentButtons.innerHTML = '';
+            const equipmentList = [
+                { name: "灌溉设备", cost: 300 },
+                { name: "防洪设施", cost: 500 },
+                { name: "气象监测仪", cost: 400 },
+                { name: "除虫设备", cost: 200 },
+                { name: "保暖设备", cost: 250 }
+            ];
+            equipmentList.forEach(item => {
+                const button = document.createElement('button');
+                button.textContent = `💧 ${item.name} (₹${item.cost})`;
+                button.onclick = () => buyItem(item.name, item.cost);
+                equipmentButtons.appendChild(button);
+            });
+
+            const laborButtons = document.getElementById('labor-buttons');
+            laborButtons.innerHTML = '';
+            [1, 2, 3, 4, 5].forEach(num => {
+                const button = document.createElement('button');
+                button.textContent = `👷‍♂️ 雇佣 ${num} 人 (₹${num * gameState.location.laborCostRate})`;
+                button.onclick = () => hireLabor(num);
+                laborButtons.appendChild(button);
+            });
+
+            updateDisplay();
+            addLog(`欢迎来到季风决策者！你出生在 ${gameState.location.name}，请先选择种植作物`);
+            showLocationInfo();
+        }
+
+        function setTargetMoney() {
+            if (gameState.targetMoneySet) {
+                addLog('目标金钱已设置，无法重新设置！');
+                return;
+            }
+            const target = parseInt(document.getElementById('target-money').value);
+            if (!isNaN(target) && target > 0) {
+                gameState.targetMoney = target;
+                gameState.targetMoneySet = true;
+                addLog(`目标金钱已设置为 ₹${target}`);
+                // 禁用输入框和按钮
+                document.getElementById('target-money').disabled = true;
+                document.querySelector('#target-money-setting button').disabled = true;
+            } else {
+                addLog('请输入有效的目标金钱！');
+            }
+        }
+
+        function updateClimate() {
+            gameState.climateRisk = Math.min(50, gameState.climateRisk + 2);
+            document.getElementById('climate-meter').textContent =
+                `极端天气概率: ${gameState.climateRisk}%`;
+        }
+
+        function applyRandomPolicy() {
+            if (Math.random() < 0.6) return; // 60%几率无政策
+
+            const policy = gameState.location.policies[Math.floor(Math.random() * gameState.location.policies.length)];
+            policy.effect();
+            gameState.policies.push(policy.name);
+
+            const policyDiv = document.getElementById('policy-effect');
+            policyDiv.innerHTML = `
+                <h4>📜 新政策颁布：${policy.name}</h4>
+                <p>${policy.description}</p>
+            `;
+            // 弹窗显示新政策
+            alert(`新政策颁布：${policy.name}\n${policy.description}`);
+        }
+
+        function updateMapEffect(scenario) {
+            const map = document.getElementById('map');
+            map.className = '';
+            map.innerHTML = '';
+
+            const overlay = document.createElement('div');
+            overlay.className = 'satellite-overlay';
+
+            if (scenario.type === '洪水' || scenario.type === '暴雨洪涝' || scenario.type === '梅雨洪涝') {
+                overlay.classList.add('flood-effect');
+                map.style.backgroundColor = '#006994';
+            } else if (scenario.type === '干旱' || scenario.type === '延迟干旱' || scenario.type === '伏旱' || scenario.type === '低温霜冻' || scenario.type === '极寒' || scenario.type === '热浪') {
+                overlay.classList.add('drought-effect');
+                map.style.backgroundColor = '#8B4513';
+            }
+
+            map.appendChild(overlay);
+            map.insertAdjacentHTML('beforeend',
+                `<h2 style="color:white; position:absolute; top:10px; left:10px">
+                    ${scenario.type}
+                </h2>`);
+        }
+
+        function calculateYield(scenario) {
+            let yieldRate = scenario.yieldFactor;
+
+            if (gameState.currentCrop === '水稻' && (scenario.type === '洪水' || scenario.type === '暴雨洪涝' || scenario.type === '梅雨洪涝')) {
+                yieldRate = 0.8;
+            } else if (gameState.currentCrop === '小麦' && (scenario.type === '干旱' || scenario.type === '延迟干旱' || scenario.type === '伏旱')) {
+                yieldRate = 0.2;
+            } else if (gameState.currentCrop === '高粱' && (scenario.type === '干旱' || scenario.type === '延迟干旱' || scenario.type === '伏旱')) {
+                yieldRate = 0.6;
+            } else if (gameState.currentCrop === '玉米' && scenario.type === '正常') {
+                yieldRate = 1.1;
+            }
+
+            if (gameState.equipment.includes('灌溉设备') && (scenario.type === '干旱' || scenario.type === '延迟干旱' || scenario.type === '伏旱')) {
+                yieldRate *= 1.5;
+            }
+            if (gameState.equipment.includes('防洪设施') && (scenario.type === '洪水' || scenario.type === '暴雨洪涝' || scenario.type === '梅雨洪涝')) {
+                yieldRate *= 1.3;
+            }
+            if (gameState.equipment.includes('气象监测仪')) {
+                const isExtreme = Math.random() < gameState.climateRisk / 100;
+                if (isExtreme) {
+                    const predictedScenario = gameState.location.monsoonScenarios[Math.random() > 0.5 ? 1 : 2];
+                    if (predictedScenario.type === scenario.type) {
+                        yieldRate *= 1.2;
+                    }
+                }
+            }
+            if (gameState.equipment.includes('除虫设备') && (scenario.type === '蝗虫灾害')) {
+                yieldRate *= 1.4;
+            }
+            if (gameState.equipment.includes('保暖设备') && (scenario.type === '低温霜冻' || scenario.type === '极寒' || scenario.type === '寒潮')) {
+                yieldRate *= 1.3;
+            }
+
+            if (gameState.labor > 0) {
+                yieldRate *= 1 + gameState.labor * 0.1;
+            }
+
+            return yieldRate;
+        }
+
+        function calculateHarvest() {
+            const isExtreme = Math.random() < gameState.climateRisk / 100;
+            const scenario = isExtreme ?
+                gameState.location.monsoonScenarios[Math.random() > 0.5 ? 1 : 2] :
+                gameState.location.monsoonScenarios[0];
+
+            updateMapEffect(scenario);
+            applyRandomPolicy();
+
+            let yieldRate = calculateYield(scenario);
+            let baseIncome = 500;
+
+            // 政策影响
+            if (gameState.policies.includes('出口禁令')) baseIncome *= 0.7;
+            if (gameState.policies.includes('技术推广')) baseIncome *= 1.2;
+
+            const income = Math.round(baseIncome * yieldRate * gameState.incomeMultiplier);
+
+            gameState.laborCost = gameState.labor * gameState.location.laborCostRate;
+            gameState.money = gameState.money + income - gameState.laborCost;
+
+            recordHistory(scenario, income);
+
+            updateClimate();
+            updateDisplay();
+            addLog(`收获收入: ₹${income}`);
+            addLog(`劳动力成本: ₹${gameState.laborCost}`);
+
+            // 弹窗显示收获信息
+            alert(`收获收入: ₹${income}\n劳动力成本: ₹${gameState.laborCost}`);
+
+            // 检查游戏失败条件
+            if (gameState.money < 0) {
+                alert('游戏失败！资金不足。');
+                resetGame();
+            }
+            // 检查游戏胜利条件
+            if (gameState.year >= 2033 && gameState.money >= gameState.targetMoney) {
+                alert('游戏胜利！你成功在10年内积累了足够的资金。');
+                resetGame();
+            }
+
+            showKnowledgeTip();
+        }
+
+        function recordHistory(scenario, income) {
+            gameState.history.push({
+                year: gameState.year++,
+                monsoon: scenario.type,
+                income: income,
+                policy: gameState.policies.slice(-1)[0] || '无',
+                laborCost: gameState.laborCost
+            });
+
+            const tbody = document.getElementById('history-body');
+            tbody.innerHTML = gameState.history.map(entry => `
+                <tr>
+                    <td>${entry.year}</td>
+                    <td>${entry.monsoon}</td>
+                    <td>₹${entry.income}</td>
+                    <td>${entry.policy}</td>
+                    <td>₹${entry.laborCost}</td>
+                </tr>
+            `).join('');
+        }
+
+        function chooseCrop(crop) {
+            gameState.currentCrop = crop;
+            addLog(`选择种植: ${crop}`);
+        }
+
+        function buyItem(item, cost) {
+            const actualCost = Math.round(cost * gameState.equipmentCost);
+            if (gameState.money >= actualCost) {
+                gameState.money -= actualCost;
+                gameState.equipment.push(item);
+                addLog(`购买: ${item} (花费₹${actualCost})`);
+                updateDisplay();
+            } else {
+                addLog('⚠️ 资金不足！');
+            }
+        }
+
+        function hireLabor(num) {
+            const cost = num * gameState.location.laborCostRate;
+            if (gameState.money >= cost) {
+                gameState.money -= cost;
+                gameState.labor = num;
+                addLog(`雇佣 ${num} 名劳动力 (花费₹${cost})`);
+                updateDisplay();
+            } else {
+                addLog('⚠️ 资金不足，无法雇佣劳动力！');
+            }
+        }
+
+        function startNewYear() {
+            if (!gameState.currentCrop) {
+                alert('请先选择作物！');
+                return;
+            }
+            calculateHarvest();
+        }
+
+        function updateDisplay() {
+            document.getElementById('money').textContent = gameState.money;
+        }
+
+        function addLog(message) {
+            const log = document.getElementById('log');
+            log.innerHTML += `<div>${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function resetGame() {
+            gameState = {
+                money: 1000,
+                currentCrop: null,
+                equipment: [],
+                policies: [],
+                history: [],
+                climateRisk: 15,
+                year: 2023,
+                incomeMultiplier: 1,
+                equipmentCost: 1,
+                location: null,
+                labor: 0,
+                laborCost: 0,
+                targetMoney: 5000,
+                targetMoneySet: false
+            };
+            document.getElementById('money').textContent = gameState.money;
+            document.getElementById('policy-effect').innerHTML = '';
+            document.getElementById('history-body').innerHTML = '';
+            document.getElementById('climate-meter').textContent = '极端天气概率: 15%';
+            // 启用目标金钱设置
+            document.getElementById('target-money').disabled = false;
+            document.querySelector('#target-money-setting button').disabled = false;
+            initGame();
+        }
+
+        function showLocationInfo() {
+            const description = gameState.location.description;
+            document.getElementById('location-description').textContent = description;
+        }
+
+        function showKnowledgeTip() {
+            const tips = {
+                "俄罗斯": [
+                    "俄罗斯的西伯利亚地区是世界上最冷的地区之一，冬季气温可低至零下50摄氏度以下。",
+                    "俄罗斯的森林资源丰富，森林覆盖率约为49%。",
+                    "俄罗斯的农业主要集中在南部的伏尔加河流域和顿河流域。"
+                ],
+                "东南亚": [
+                    "东南亚是世界上最大的天然橡胶生产地，泰国、印度尼西亚和马来西亚是主要的生产国。",
+                    "东南亚的热带雨林是许多珍稀动植物的栖息地，如猩猩、大象和犀牛。",
+                    "东南亚的季风气候分为旱季和雨季，雨季一般从5月持续到10月。"
+                ],
+                "印度": [
+                    "印度是世界上第二人口大国，人口超过13亿。",
+                    "印度的恒河是印度教的圣河，每年有大量的信徒前往恒河沐浴祈福。",
+                    "印度的农业以水稻和小麦种植为主，是世界上重要的粮食生产国之一。"
+                ],
+                "中国南方": [
+                    "中国南方的珠江三角洲是中国重要的制造业基地，以电子、服装和玩具等产业闻名。",
+                    "中国南方的茶叶品种繁多，如西湖龙井、铁观音和普洱茶等。",
+                    "中国南方的梅雨季节一般从6月持续到7月，期间降雨频繁。"
+                ],
+                "中国北方": [
+                    "中国北方的黄土高原是世界上最大的黄土堆积区，水土流失严重。",
+                    "中国北方的东北地区是中国重要的重工业基地，以钢铁、机械和化工等产业为主。",
+                    "中国北方的冬季寒冷干燥，降雪较多，是中国重要的冰雪旅游胜地。"
+                ]
+            };
+            const locationTips = tips[gameState.location.name];
+            const randomIndex = Math.floor(Math.random() * locationTips.length);
+            const tip = locationTips[randomIndex];
+            alert(`地理小知识：${tip}`);
+        }
+
+        // 显示规则弹窗
+        function showRulesModal() {
+            document.getElementById('rules-modal').style.display = "block";
+        }
+
+        // 关闭规则弹窗
+        function closeRulesModal() {
+            document.getElementById('rules-modal').style.display = "none";
+        }
+
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+
+</html>    
