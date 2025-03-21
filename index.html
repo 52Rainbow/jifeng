@@ -236,7 +236,7 @@
             </table>
 
             <h3>🌍 气候变化指数</h3>
-            <div id="climate-meter">极端天气概率: 15%</div>
+            <div id="climate-meter">极端天气概率: 70%</div>
 
             <h3>📚 帮助信息</h3>
             <div id="help-info">
@@ -292,7 +292,7 @@
             equipment: [],
             policies: [],
             history: [],
-            climateRisk: 70,
+            climateRisk: 70, // 修改初始极端天气概率为70%
             year: 2023,
             incomeMultiplier: 1,
             equipmentCost: 1,
@@ -307,7 +307,7 @@
         const LOCATIONS = [
             {
                 name: "俄罗斯",
-                climateRisk: 10,
+                climateRisk: 60, // 提高俄罗斯的气候风险
                 monsoonScenarios: [
                     { type: "正常", yieldFactor: 0.8 },
                     { type: "低温霜冻", yieldFactor: 0.2 },
@@ -338,7 +338,7 @@
             },
             {
                 name: "东南亚",
-                climateRisk: 20,
+                climateRisk: 70, // 提高东南亚的气候风险
                 monsoonScenarios: [
                     { type: "正常", yieldFactor: 1.2 },
                     { type: "台风", yieldFactor: 0.3 },
@@ -369,7 +369,7 @@
             },
             {
                 name: "印度",
-                climateRisk: 25,
+                climateRisk: 75, // 提高印度的气候风险
                 monsoonScenarios: [
                     { type: "正常", yieldFactor: 1 },
                     { type: "干旱", yieldFactor: 0.3 },
@@ -400,7 +400,7 @@
             },
             {
                 name: "中国南方",
-                climateRisk: 22,
+                climateRisk: 72, // 提高中国南方的气候风险
                 monsoonScenarios: [
                     { type: "正常", yieldFactor: 1.1 },
                     { type: "梅雨洪涝", yieldFactor: 0.4 },
@@ -431,7 +431,7 @@
             },
             {
                 name: "中国北方",
-                climateRisk: 18,
+                climateRisk: 68, // 提高中国北方的气候风险
                 monsoonScenarios: [
                     { type: "正常", yieldFactor: 0.9 },
                     { type: "干旱", yieldFactor: 0.2 },
@@ -551,7 +551,7 @@
             applyRandomPolicy();
 
             let yieldRate = calculateYield(scenario);
-            let baseIncome = 500;
+            let baseIncome = 300; // 降低基础收入
 
             if (gameState.policies.includes('出口禁令')) baseIncome *= 0.7;
             if (gameState.policies.includes('技术推广')) baseIncome *= 1.2;
@@ -608,7 +608,7 @@
         }
 
         function buyItem(item, cost) {
-            const totalCost = cost * gameState.equipmentCost;
+            const totalCost = cost * 1.5 * gameState.equipmentCost; // 增加设备成本
             if (gameState.money >= totalCost) {
                 gameState.money -= totalCost;
                 gameState.equipment.push(item);
@@ -620,7 +620,7 @@
         }
 
         function hireLabor(num) {
-            const totalCost = num * gameState.location.laborCostRate;
+            const totalCost = num * 1.5 * gameState.location.laborCostRate; // 增加劳动力成本
             if (gameState.money >= totalCost) {
                 gameState.money -= totalCost;
                 gameState.labor += num;
@@ -664,7 +664,7 @@
             ];
             equipmentList.forEach(item => {
                 const button = document.createElement('button');
-                button.textContent = `${item.name} (₹${item.cost * gameState.equipmentCost})`;
+                button.textContent = `${item.name} (₹${item.cost * 1.5 * gameState.equipmentCost})`;
                 button.onclick = () => buyItem(item.name, item.cost);
                 equipmentButtons.appendChild(button);
             });
@@ -673,7 +673,7 @@
             laborButtons.innerHTML = '';
             [1, 2, 3].forEach(num => {
                 const button = document.createElement('button');
-                button.textContent = `雇佣 ${num} 名劳动力 (₹${num * gameState.location.laborCostRate})`;
+                button.textContent = `雇佣 ${num} 名劳动力 (₹${num * 1.5 * gameState.location.laborCostRate})`;
                 button.onclick = () => hireLabor(num);
                 laborButtons.appendChild(button);
             });
@@ -694,7 +694,7 @@
                 equipment: [],
                 policies: [],
                 history: [],
-                climateRisk: 15,
+                climateRisk: 70,
                 year: 2023,
                 incomeMultiplier: 1,
                 equipmentCost: 1,
