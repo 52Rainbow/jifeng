@@ -210,6 +210,7 @@
                 <div id="labor-buttons"></div>
 
                 <button onclick="startNewYear()" style="margin:20px 0">⏩ 进入下一年</button>
+                <button onclick="showTips()">💡 提示</button>
             </div>
 
             <div id="log"></div>
@@ -235,7 +236,7 @@
             </table>
 
             <h3>🌍 气候变化指数</h3>
-            <div id="climate-meter">极端天气概率: 75%</div>
+            <div id="climate-meter">极端天气概率: 15%</div>
 
             <h3>📚 帮助信息</h3>
             <div id="help-info">
@@ -244,7 +245,6 @@
                 <p>👷‍♂️ 雇佣劳动力能提高工作效率，但会增加成本。</p>
                 <p>📜 政策会影响你的收入和成本，注意应对。</p>
                 <p>🌍 气候变化指数会影响极端天气的概率，注意应对。</p>
-                <p>❗ 灾害可能会破坏设备和使劳动力流失，需提前做好准备。</p>
             </div>
         </div>
     </div>
@@ -267,9 +267,21 @@
             <p>6. 应对政策：政府会随机颁布政策，影响你的收入和成本。</p>
             <p>7. 应对气候变化：随着游戏进行，气候变化指数会上升，极端天气的概率增加。</p>
             <p>8. 收获收入：每年收获时，根据作物产量、政策和气候变化等因素计算收入。</p>
-            <p>9. 灾害影响：灾害可能会破坏设备和使劳动力流失，需提前做好准备。</p>
-            <p>10. 游戏胜利和失败：如果在10年内积累的资金达到或超过目标金钱，游戏胜利；如果资金不足，游戏失败。</p>
+            <p>9. 游戏胜利和失败：如果在10年内积累的资金达到或超过目标金钱，游戏胜利；如果资金不足，游戏失败。</p>
             <p>（初一四班 王子龙协助制作）</p>
+        </div>
+    </div>
+
+    <!-- 提示弹窗 -->
+    <div id="tips-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTipsModal()">&times;</span>
+            <h2>游戏提示</h2>
+            <p>选择适合当地气候的作物可以提高产量。</p>
+            <p>购买合适的设备能应对不同的灾害。</p>
+            <p>合理雇佣劳动力能提高效率，但要控制成本。</p>
+            <p>关注政策变化，利用政策优势增加收入。</p>
+            <p>随着年份增加，极端天气概率上升，提前做好准备。</p>
         </div>
     </div>
 
@@ -280,7 +292,7 @@
             equipment: [],
             policies: [],
             history: [],
-            climateRisk: 75, // 修改初始灾害概率为75%
+            climateRisk: 15,
             year: 2023,
             incomeMultiplier: 1,
             equipmentCost: 1,
@@ -289,7 +301,7 @@
             laborCost: 0,
             targetMoney: 5000,
             targetMoneySet: false,
-            disasterCount: 0
+            disasterCount: 0 // 新增属性，记录灾害次数
         };
 
         const LOCATIONS = [
@@ -474,7 +486,6 @@
         }
 
         function updateClimate() {
-            // 去掉灾害概率增长逻辑，保持灾害概率为75%
             document.getElementById('climate-meter').textContent = `极端天气概率: ${gameState.climateRisk}%`;
         }
 
@@ -532,6 +543,8 @@
                     gameState.labor -= lostLabor;
                     addLog(`⚠️ 灾害导致 ${lostLabor} 名劳动力流失！`);
                 }
+                // 灾害发生时弹窗提示
+                alert(`⚠️ ${gameState.year} 年发生了 ${scenario.type} 灾害！`);
             }
 
             updateMapEffect(scenario);
@@ -681,7 +694,7 @@
                 equipment: [],
                 policies: [],
                 history: [],
-                climateRisk: 75, // 重置时也设置为75%
+                climateRisk: 15,
                 year: 2023,
                 incomeMultiplier: 1,
                 equipmentCost: 1,
@@ -723,6 +736,20 @@
         function closeRulesModal() {
             const modal = document.getElementById('rules-modal');
             modal.style.display = 'none';
+        }
+
+        function showTipsModal() {
+            const modal = document.getElementById('tips-modal');
+            modal.style.display = 'block';
+        }
+
+        function closeTipsModal() {
+            const modal = document.getElementById('tips-modal');
+            modal.style.display = 'none';
+        }
+
+        function showTips() {
+            showTipsModal();
         }
 
         window.onload = initGame;
