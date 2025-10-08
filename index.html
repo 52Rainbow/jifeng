@@ -1,0 +1,4047 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>季风决策者v2.4</title>
+  <link rel="icon" href="./f.ico">
+  <style>
+    :root {
+      --flood-color: #006994;
+      --drought-color: #8B4513;
+      --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --secondary-bg: rgba(255, 255, 255, 0.95);
+      --accent-color: #FF5722;
+      --success-color: #4CAF50;
+      --warning-color: #FF9800;
+      --danger-color: #f44336;
+      --info-color: #2196F3;
+      --policy-bg: rgba(255, 249, 230, 0.9);
+      --policy-border: #ffd700;
+      --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      --border-radius: 12px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--primary-bg);
+      min-height: 100vh;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .game-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 20px;
+      min-height: 100vh;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 20px;
+    }
+
+    .game-header {
+      background: var(--secondary-bg);
+      padding: 20px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      text-align: center;
+      background-image: url('imgs/beautiful_farm_agriculture_landscape_sunset_game_background.jpg');
+      background-size: cover;
+      background-position: center;
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+      position: relative;
+    }
+
+    .game-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: var(--border-radius);
+    }
+
+    .game-header * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .status-bar {
+      background: var(--secondary-bg);
+      padding: 15px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    .status-item {
+      text-align: center;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
+      border-left: 4px solid var(--accent-color);
+      transition: var(--transition);
+    }
+
+    .status-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-value {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+
+    .status-label {
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .game-board {
+      background: var(--secondary-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+
+    .map-container {
+      background: linear-gradient(45deg, #8FBC8F, #98FB98);
+      border-radius: var(--border-radius);
+      height: 250px;
+      position: relative;
+      overflow: hidden;
+      background-image: url('imgs/farm_background_for_agriculture_simulator_game.jpg');
+      background-size: cover;
+      background-position: center;
+    }
+
+    .map-overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      z-index: 10;
+    }
+
+    .satellite-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      transition: all 0.5s ease;
+    }
+
+    .flood-effect {
+      background: radial-gradient(circle, transparent 30%, rgba(0, 105, 148, 0.3) 70%);
+      animation: flood-wave 2s infinite;
+    }
+
+    .drought-effect {
+      background: radial-gradient(circle, transparent 30%, rgba(139, 69, 19, 0.3) 70%);
+      animation: heat-shimmer 3s infinite;
+    }
+
+    @keyframes flood-wave {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    @keyframes heat-shimmer {
+      0%, 100% { filter: hue-rotate(0deg); }
+      50% { filter: hue-rotate(30deg); }
+    }
+
+    .particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    @keyframes particleFloat {
+      0% {
+        transform: translateY(100px) translateX(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-20px) translateX(20px);
+        opacity: 0;
+      }
+    }
+
+    .game-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .control-section {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .section-title {
+      font-weight: bold;
+      color: var(--accent-color);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .crop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 8px;
+    }
+
+    .crop-button {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+      font-size: 0.9em;
+    }
+
+    .crop-button:hover {
+      border-color: var(--accent-color);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .crop-button.selected {
+      border-color: var(--success-color);
+      background: var(--success-color);
+      color: white;
+    }
+
+    .crop-icon {
+      font-size: 1.5em;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .crop-description {
+      font-size: 0.7em;
+      color: #666;
+      line-height: 1.2;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel {
+      background: var(--secondary-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: var(--accent-color);
+      color: white;
+      padding: 12px 15px;
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+
+    .panel-content {
+      padding: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .policy-card {
+      background: var(--policy-bg);
+      border: 2px solid var(--policy-border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .policy-card h4 {
+      color: #B8860B;
+      margin-bottom: 5px;
+    }
+
+    /* 按钮样式 */
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: var(--transition);
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      font-size: 0.9em;
+    }
+
+    .success-btn {
+      background: var(--success-color);
+      color: white;
+    }
+
+    .success-btn:hover {
+      background: #45a049;
+      transform: translateY(-1px);
+    }
+
+    .warning-btn {
+      background: var(--warning-color);
+      color: white;
+    }
+
+    .warning-btn:hover {
+      background: #f57c00;
+      transform: translateY(-1px);
+    }
+
+    .danger-btn {
+      background: var(--danger-color);
+      color: white;
+    }
+
+    .danger-btn:hover {
+      background: #d32f2f;
+      transform: translateY(-1px);
+    }
+
+    .info-btn {
+      background: var(--info-color);
+      color: white;
+    }
+
+    .info-btn:hover {
+      background: #1976d2;
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* 模态框样式 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: var(--border-radius);
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+      animation: modalSlideIn 0.3s ease;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        transform: scale(0.7);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .modal-content.success {
+      border-left: 5px solid var(--success-color);
+    }
+
+    .modal-content.failure {
+      border-left: 5px solid var(--danger-color);
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #aaa;
+    }
+
+    .close-btn:hover {
+      color: #000;
+    }
+
+    /* 技能条样式 */
+    .skill-bar {
+      width: 100%;
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      margin: 5px 0 10px 0;
+      overflow: hidden;
+    }
+
+    .skill-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--success-color), var(--warning-color));
+      transition: width 0.5s ease;
+    }
+
+    /* 市场相关样式 */
+    .market-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      background: rgba(255, 255, 255, 0.5);
+      margin: 5px 0;
+      border-radius: 4px;
+    }
+
+    .market-item:last-child {
+      border-bottom: none;
+    }
+
+    .market-item-info {
+      flex: 1;
+    }
+
+    .market-controls {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .market-input {
+      width: 60px;
+      padding: 4px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    /* 日志样式 */
+    .log-container {
+      max-height: 150px;
+      overflow-y: auto;
+      background: #f5f5f5;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 0.8em;
+    }
+
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 0;
+    }
+
+    .log-entry.success {
+      color: var(--success-color);
+    }
+
+    .log-entry.warning {
+      color: var(--warning-color);
+    }
+
+    .log-entry.error {
+      color: var(--danger-color);
+    }
+
+    .log-entry.info {
+      color: var(--info-color);
+    }
+
+    /* 历史表格样式 */
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8em;
+    }
+
+    .history-table th,
+    .history-table td {
+      padding: 5px 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .history-table th {
+      background: #f0f0f0;
+      font-weight: bold;
+    }
+
+    /* 成就样式 */
+    .achievement-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .achievement-item.unlocked {
+      background: rgba(76, 175, 80, 0.1);
+      border-left: 3px solid var(--success-color);
+    }
+
+    .achievement-item.locked {
+      background: rgba(0, 0, 0, 0.05);
+      opacity: 0.6;
+    }
+
+    .achievement-icon {
+      font-size: 1.5em;
+      margin-right: 10px;
+    }
+
+    .achievement-info {
+      flex: 1;
+    }
+
+    .achievement-name {
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .achievement-desc {
+      font-size: 0.8em;
+      color: #666;
+    }
+
+    /* 新增：声望系统样式 */
+    .reputation-bar {
+      background: linear-gradient(90deg, #ff6b6b, #ffa500, #4ecdc4, #45b7d1, #96ceb4);
+      height: 10px;
+      border-radius: 5px;
+      position: relative;
+      margin: 5px 0;
+    }
+
+    .reputation-indicator {
+      position: absolute;
+      top: -2px;
+      width: 6px;
+      height: 14px;
+      background: white;
+      border: 2px solid #333;
+      border-radius: 2px;
+      transition: left 0.5s ease;
+    }
+
+    /* 新增：季节效果样式 */
+    .season-effect {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 8px;
+      padding: 10px;
+      margin: 10px 0;
+      border-left: 4px solid var(--info-color);
+    }
+
+    /* 新增：合作社样式 */
+    .coop-panel {
+      background: rgba(255, 248, 220, 0.9);
+      border: 2px solid #daa520;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+    }
+
+    /* 新增：研发系统样式 */
+    .research-item {
+      background: rgba(240, 248, 255, 0.9);
+      border: 1px solid #87ceeb;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 8px 0;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .research-item:hover {
+      background: rgba(135, 206, 235, 0.2);
+      transform: translateX(5px);
+    }
+
+    .research-item.completed {
+      background: rgba(144, 238, 144, 0.3);
+      border-color: var(--success-color);
+    }
+
+    .research-item.in-progress {
+      background: rgba(255, 255, 0, 0.2);
+      border-color: var(--warning-color);
+    }
+
+    /* 响应式设计 */
+    @media screen and (max-width: 1200px) {
+      .game-container {
+        grid-template-columns: 1fr;
+        max-width: 800px;
+      }
+      
+      .sidebar {
+        grid-row: 1;
+      }
+    }
+
+    @media screen and (max-width: 768px) {
+      .game-container {
+        padding: 10px;
+        gap: 10px;
+      }
+      
+      .status-bar {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .game-board {
+        grid-template-columns: 1fr;
+      }
+      
+      .crop-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 模式选择弹窗 -->
+  <div id="mode-selection-modal" class="modal" style="display: flex;">
+    <div class="modal-content">
+      <h2>🌦️ 季风决策者v2.4</h2>
+      <p>选择您的挑战模式</p>
+      
+      <div style="margin: 20px 0;">
+        <label style="display: block; margin: 10px 0;">
+          <input type="radio" name="game-mode" value="tutorial" checked> 
+          🎓 教学模式 (推荐新手)
+        </label>
+        <label style="display: block; margin: 10px 0;">
+          <input type="radio" name="game-mode" value="challenge"> 
+          🎯 挑战模式 (限时挑战)
+        </label>
+        <label style="display: block; margin: 10px 0;">
+          <input type="radio" name="game-mode" value="endless"> 
+          ♾️ 无尽模式 (自由发展)
+        </label>
+        <label style="display: block; margin: 10px 0;">
+          <input type="radio" name="game-mode" value="extreme"> 
+          💀 极限模式 (专家挑战)
+        </label>
+      </div>
+      
+      <div id="challenge-settings" style="margin: 20px 0; display: none;">
+        <label for="challenge-years">挑战年限:</label>
+        <input type="number" id="challenge-years" min="5" max="50" value="20" style="margin: 0 10px;">
+      </div>
+      
+      <div style="margin: 20px 0;">
+        <label>选择难度:</label>
+        <select id="difficulty" style="margin-left: 10px; padding: 5px;">
+          <option value="10">🌱 新手 (10%)</option>
+          <option value="25">🌿 简单 (25%)</option>
+          <option value="50" selected>🌾 普通 (50%)</option>
+          <option value="75">🌪️ 困难 (75%)</option>
+          <option value="90">💀 地狱 (90%)</option>
+          <option value="100">🔥 噩梦 (100%)</option>
+        </select>
+      </div>
+      
+      <button onclick="startSettings()" class="btn success-btn">下一步 →</button>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <h2>🌍 选择出生地</h2>
+      <div id="birthplace-selection" style="text-align: left;">
+        <div class="birthplace-option" style="margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+          <h4>🇨🇳 中国</h4>
+          <p>多样气候，农业发达，技术先进</p>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="china-north" checked> 华北平原 (小麦主产区)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="china-south"> 长江中下游 (水稻主产区)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="china-west"> 西北地区 (干旱适应)
+          </label>
+        </div>
+        
+        <div class="birthplace-option" style="margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+          <h4>🇷🇺 俄罗斯</h4>
+          <p>气候严寒，土地广阔，机械化程度高</p>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="russia-south"> 南部平原 (谷物产区)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="russia-west"> 西伯利亚 (严寒挑战)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="russia-east"> 远东地区 (边境发展)
+          </label>
+        </div>
+        
+        <div class="birthplace-option" style="margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+          <h4>🌴 东南亚</h4>
+          <p>热带气候，季风明显，多样化种植</p>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="sea-thailand"> 泰国中部 (稻米王国)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="sea-vietnam"> 越南北部 (季风水稻)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="sea-indonesia"> 印尼群岛 (多岛经济)
+          </label>
+        </div>
+        
+        <div class="birthplace-option" style="margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+          <h4>🇮🇳 印度</h4>
+          <p>季风依赖，人口众多，传统与现代并存</p>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="india-north"> 北部平原 (恒河流域)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="india-south"> 南部高原 (香料产区)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="india-east"> 东部沿海 (季风前沿)
+          </label>
+        </div>
+
+        <div class="birthplace-option" style="margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+          <h4>🌍 非洲</h4>
+          <p>挑战与机遇并存，气候多变</p>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="africa-east"> 东非高原 (咖啡产区)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="africa-west"> 西非平原 (可可产区)
+          </label>
+          <label style="margin: 5px 0; display: block;">
+            <input type="radio" name="birthplace" value="africa-south"> 南非草原 (多样农业)
+          </label>
+        </div>
+      </div>
+      <button onclick="startGame()" class="btn success-btn">开始游戏 🚀</button>
+    </div>
+  </div>
+
+  <!-- 教程弹窗 -->
+  <div id="tutorial-overlay" class="modal">
+    <div class="modal-content">
+      <h2>🎓 游戏教程</h2>
+      <p id="tutorial-text">欢迎来到季风决策者增强版！</p>
+      <div style="margin: 20px 0;">
+        <button onclick="nextTutorial()" class="btn success-btn">下一步</button>
+        <button onclick="skipTutorial()" class="btn warning-btn">跳过教程</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 游戏结束弹窗 -->
+  <div id="game-over-modal" class="modal">
+    <div class="modal-content" id="modal-content">
+      <h2 id="modal-title">游戏结束</h2>
+      <p id="modal-message">您的农场经营结束了</p>
+      <div style="margin: 20px 0;">
+        <button onclick="restartGame()" class="btn success-btn">重新开始</button>
+        <button onclick="exportScore()" class="btn info-btn">导出战绩</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 市场弹窗 -->
+  <div id="market-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeMarket()">&times;</span>
+      <h2>🏪 农产品市场</h2>
+      <div id="market-content">
+        <!-- 市场内容将动态生成 -->
+      </div>
+      <div style="margin-top: 20px;">
+        <button onclick="closeMarket()" class="btn warning-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 贷款中心弹窗 -->
+  <div id="loan-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeLoanCenter()">&times;</span>
+      <h2>🏦 贷款中心</h2>
+      <div id="loan-content">
+        <!-- 贷款内容将动态生成 -->
+      </div>
+      <div style="margin-top: 20px;">
+        <button onclick="closeLoanCenter()" class="btn warning-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保险弹窗 -->
+  <div id="insurance-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeInsurance()">&times;</span>
+      <h2>🛡️ 农业保险</h2>
+      <div id="insurance-content">
+        <!-- 保险内容将动态生成 -->
+      </div>
+      <div style="margin-top: 20px;">
+        <button onclick="closeInsurance()" class="btn warning-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增：合作社弹窗 -->
+  <div id="coop-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeCoop()">&times;</span>
+      <h2>🤝 农业合作社</h2>
+      <div id="coop-content">
+        <!-- 合作社内容将动态生成 -->
+      </div>
+      <div style="margin-top: 20px;">
+        <button onclick="closeCoop()" class="btn warning-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增：研发中心弹窗 -->
+  <div id="research-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeResearch()">&times;</span>
+      <h2>🔬 农业研发中心</h2>
+      <div id="research-content">
+        <!-- 研发内容将动态生成 -->
+      </div>
+      <div style="margin-top: 20px;">
+        <button onclick="closeResearch()" class="btn warning-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导出战绩弹窗 -->
+  <div id="export-score-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeExportModal()">&times;</span>
+      <h2>📊 导出战绩</h2>
+      <div style="margin: 20px 0;">
+        <label for="player-name">农场主姓名:</label>
+        <input type="text" id="player-name" placeholder="请输入您的姓名" style="width: 100%; padding: 8px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="exportScoreImage()" class="btn success-btn">导出图片</button>
+        <button onclick="exportScoreJSON()" class="btn info-btn">导出数据</button>
+        <button onclick="exportDetailedReport()" class="btn warning-btn">详细报告</button>
+        <button onclick="backupGameData()" class="btn danger-btn">备份存档</button>
+      </div>
+      <div style="margin-top: 15px;">
+        <label for="import-data">恢复存档:</label>
+        <input type="file" id="import-data" accept=".json" onchange="restoreGameData(event)" style="width: 100%; margin: 5px 0;">
+      </div>
+    </div>
+  </div>
+
+  <div class="game-container">
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <!-- 游戏标题 -->
+      <div class="game-header">
+        <h1>🌦️ 季风决策者v2.4 🚜</h1>
+        <p>管理您的农场，应对季风挑战，成为农业传奇！</p>
+      </div>
+
+      <!-- 状态栏 -->
+      <div class="status-bar">
+        <div class="status-item">
+          <div class="status-value">₹<span id="money">2000</span></div>
+          <div class="status-label">💰 资金</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value"><span id="current-population">200</span></div>
+          <div class="status-label">👥 人口</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value"><span id="current-year">1</span></div>
+          <div class="status-label">📅 年份</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value"><span id="climate-risk">30</span>%</div>
+          <div class="status-label">🌡️ 气候风险</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value">Lv.<span id="farmer-level">1</span></div>
+          <div class="status-label">👨‍🌾 农民等级</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value"><span id="current-season">春季</span></div>
+          <div class="status-label">🌸 当前季节</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value"><span id="reputation">50</span></div>
+          <div class="status-label">🌟 声望</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value"><span id="research-points">0</span></div>
+          <div class="status-label">🧪 研发点</div>
+        </div>
+      </div>
+
+      <!-- 游戏面板 -->
+      <div class="game-board">
+        <!-- 地图区域 -->
+        <div class="map-container" id="map-container">
+          <div class="map-overlay" id="map-overlay">正常天气</div>
+          <div class="satellite-overlay" id="satellite-overlay"></div>
+          <div class="particles" id="particles"></div>
+        </div>
+
+        <!-- 游戏控制区 -->
+        <div class="game-controls">
+          <!-- 政策显示 -->
+          <div id="policy-effect" class="policy-card" style="display: none;">
+            <h4>📜 当前政策</h4>
+            <p id="policy-text">无活跃政策</p>
+          </div>
+
+          <!-- 季节效果显示 -->
+          <div id="season-effect" class="season-effect">
+            <h4>🌸 季节效果</h4>
+            <p id="season-text">春季：万物复苏，作物生长良好</p>
+          </div>
+
+          <!-- 作物选择 -->
+          <div class="control-section">
+            <div class="section-title">
+              🌱 选择作物
+              <span style="font-size: 0.8em; color: #666;">(当前: <span id="current-crop-display">无</span>)</span>
+            </div>
+            <div class="crop-grid" id="crop-grid">
+              <!-- 主要粮食作物 -->
+              <button class="crop-button" onclick="chooseCrop('水稻')" data-crop="水稻">
+                <span class="crop-icon">🌾</span>
+                <div>水稻</div>
+                <div class="crop-description">适应洪水<br>基础产量</div>
+              </button>
+              <button class="crop-button" onclick="chooseCrop('小麦')" data-crop="小麦">
+                <span class="crop-icon">🌾</span>
+                <div>小麦</div>
+                <div class="crop-description">正常气候<br>稳定收益</div>
+              </button>
+              <button class="crop-button" onclick="chooseCrop('玉米')" data-crop="玉米">
+                <span class="crop-icon">🌽</span>
+                <div>玉米</div>
+                <div class="crop-description">高产量<br>正常环境</div>
+              </button>
+              <button class="crop-button" onclick="chooseCrop('高粱')" data-crop="高粱">
+                <span class="crop-icon">🌾</span>
+                <div>高粱</div>
+                <div class="crop-description">抗旱<br>干旱适应</div>
+              </button>
+              <!-- 经济作物 -->
+              <button class="crop-button" onclick="chooseCrop('棉花')" data-crop="棉花">
+                <span class="crop-icon">🌿</span>
+                <div>棉花</div>
+                <div class="crop-description">经济作物<br>高价值</div>
+              </button>
+              <button class="crop-button" onclick="chooseCrop('茶叶')" data-crop="茶叶">
+                <span class="crop-icon">🍃</span>
+                <div>茶叶</div>
+                <div class="crop-description">山地作物<br>特殊环境</div>
+              </button>
+              <button class="crop-button" onclick="chooseCrop('甘蔗')" data-crop="甘蔗">
+                <span class="crop-icon">🎋</span>
+                <div>甘蔗</div>
+                <div class="crop-description">热带作物<br>高温多湿</div>
+              </button>
+              <button class="crop-button" onclick="chooseCrop('橡胶')" data-crop="橡胶">
+                <span class="crop-icon">🌳</span>
+                <div>橡胶</div>
+                <div class="crop-description">热带经济<br>长期投资</div>
+              </button>
+              <!-- 新增特殊作物 -->
+              <button class="crop-button" onclick="chooseCrop('咖啡')" data-crop="咖啡">
+                <span class="crop-icon">☕</span>
+                <div>咖啡</div>
+                <div class="crop-description">高价经济<br>山地种植</div>
+              </button>
+              <button class="crop-button" onclick="chooseCrop('可可')" data-crop="可可">
+                <span class="crop-icon">🍫</span>
+                <div>可可</div>
+                <div class="crop-description">热带珍品<br>长期收益</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="control-section">
+            <div class="section-title">🎮 游戏操作</div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+              <button onclick="nextTurn()" id="next-turn-btn" class="btn success-btn">下一回合 ⏭️</button>
+              <button onclick="showMarket()" class="btn warning-btn">市场交易 🏪</button>
+              <button onclick="showLoanCenter()" class="btn danger-btn">贷款中心 🏦</button>
+              <button onclick="showInsurance()" class="btn info-btn">农业保险 🛡️</button>
+              <button onclick="showCoop()" class="btn success-btn">合作社 🤝</button>
+              <button onclick="showResearch()" class="btn info-btn">研发中心 🔬</button>
+            </div>
+          </div>
+
+          <!-- 技能与经验 -->
+          <div class="control-section">
+            <div class="section-title">📈 农民技能</div>
+            <div style="background: rgba(255,255,255,0.8); padding: 12px; border-radius: 8px;">
+              <div style="margin-bottom: 8px;">
+                种植经验: <span id="planting-exp">0</span>/<span id="planting-exp-needed">100</span>
+                <div class="skill-bar">
+                  <div class="skill-progress" id="planting-progress" style="width: 0%"></div>
+                </div>
+              </div>
+              <div style="margin-bottom: 8px;">
+                管理经验: <span id="management-exp">0</span>/<span id="management-exp-needed">100</span>
+                <div class="skill-bar">
+                  <div class="skill-progress" id="management-progress" style="width: 0%"></div>
+                </div>
+              </div>
+              <div style="margin-bottom: 8px;">
+                市场经验: <span id="market-exp">0</span>/<span id="market-exp-needed">100</span>
+                <div class="skill-bar">
+                  <div class="skill-progress" id="market-progress" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 声望系统 -->
+          <div class="control-section">
+            <div class="section-title">🌟 声望系统</div>
+            <div style="background: rgba(255,255,255,0.8); padding: 12px; border-radius: 8px;">
+              <div>声望等级: <span id="reputation-level">新手农民</span></div>
+              <div class="reputation-bar">
+                <div class="reputation-indicator" id="reputation-indicator"></div>
+              </div>
+              <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
+                <span id="reputation-desc">刚刚开始农业生涯</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧边栏 -->
+    <div class="sidebar">
+      <!-- 市场面板 -->
+      <div class="panel">
+        <div class="panel-header">
+          🏪 农产品市场
+        </div>
+        <div class="panel-content" id="market-panel">
+          <!-- 市场内容将通过JavaScript动态生成 -->
+        </div>
+      </div>
+
+      <!-- 设备面板 -->
+      <div class="panel">
+        <div class="panel-header">
+          🔧 农业设备
+        </div>
+        <div class="panel-content" id="equipment-panel">
+          <!-- 设备内容将通过JavaScript动态生成 -->
+        </div>
+      </div>
+
+      <!-- 成就面板 -->
+      <div class="panel">
+        <div class="panel-header">
+          🏆 成就与奖励
+        </div>
+        <div class="panel-content" id="achievement-panel">
+          <p style="color: #666; text-align: center;">暂无成就</p>
+        </div>
+      </div>
+
+      <!-- 历史记录 -->
+      <div class="panel">
+        <div class="panel-header">
+          📊 经营历史
+        </div>
+        <div class="panel-content">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>年份</th>
+                <th>天气</th>
+                <th>收入</th>
+                <th>作物</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <!-- 历史记录将动态生成 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 日志面板 -->
+      <div class="panel">
+        <div class="panel-header">
+          📜 游戏日志
+        </div>
+        <div class="panel-content">
+          <div class="log-container" id="log-container">
+            <!-- 日志内容将动态生成 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 游戏配置对象
+    const GAME_CONFIG = {
+      // 作物配置 - 重新平衡
+      CROPS: {
+        '水稻': {
+          baseYield: 120,
+          basePrice: 25,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.4,
+            '洪水': 1.2,
+            '严重干旱': 0.2,
+            '病虫害': 0.6,
+            '台风': 0.3,
+            '霜冻': 0.5
+          },
+          seasons: { optimal: [1, 2], good: [0, 3], poor: [] }
+        },
+        '小麦': {
+          baseYield: 100,
+          basePrice: 30,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.7,
+            '洪水': 0.6,
+            '严重干旱': 0.4,
+            '病虫害': 0.7,
+            '台风': 0.4,
+            '霜冻': 0.3
+          },
+          seasons: { optimal: [0, 3], good: [1], poor: [2] }
+        },
+        '玉米': {
+          baseYield: 140,
+          basePrice: 22,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.5,
+            '洪水': 0.7,
+            '严重干旱': 0.3,
+            '病虫害': 0.8,
+            '台风': 0.5,
+            '霜冻': 0.6
+          },
+          seasons: { optimal: [1, 2], good: [0], poor: [3] }
+        },
+        '高粱': {
+          baseYield: 90,
+          basePrice: 28,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.8,
+            '洪水': 0.6,
+            '严重干旱': 0.7,
+            '病虫害': 0.9,
+            '台风': 0.6,
+            '霜冻': 0.7
+          },
+          seasons: { optimal: [1, 2], good: [0, 3], poor: [] }
+        },
+        '棉花': {
+          baseYield: 80,
+          basePrice: 45,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.6,
+            '洪水': 0.5,
+            '严重干旱': 0.3,
+            '病虫害': 0.4,
+            '台风': 0.4,
+            '霜冻': 0.5
+          },
+          seasons: { optimal: [1], good: [2], poor: [0, 3] }
+        },
+        '茶叶': {
+          baseYield: 60,
+          basePrice: 65,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.7,
+            '洪水': 0.8,
+            '严重干旱': 0.5,
+            '病虫害': 0.6,
+            '台风': 0.7,
+            '霜冻': 0.4
+          },
+          seasons: { optimal: [0, 1], good: [2], poor: [3] }
+        },
+        '甘蔗': {
+          baseYield: 160,
+          basePrice: 18,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.5,
+            '洪水': 1.1,
+            '严重干旱': 0.2,
+            '病虫害': 0.7,
+            '台风': 0.6,
+            '霜冻': 0.1
+          },
+          seasons: { optimal: [1, 2], good: [0], poor: [3] }
+        },
+        '橡胶': {
+          baseYield: 40,
+          basePrice: 85,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.8,
+            '洪水': 1.0,
+            '严重干旱': 0.6,
+            '病虫害': 0.5,
+            '台风': 0.7,
+            '霜冻': 0.3
+          },
+          seasons: { optimal: [1, 2], good: [0, 3], poor: [] }
+        },
+        '咖啡': {
+          baseYield: 50,
+          basePrice: 95,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.6,
+            '洪水': 0.7,
+            '严重干旱': 0.4,
+            '病虫害': 0.3,
+            '台风': 0.5,
+            '霜冻': 0.2
+          },
+          seasons: { optimal: [0, 3], good: [1], poor: [2] }
+        },
+        '可可': {
+          baseYield: 45,
+          basePrice: 110,
+          modifiers: {
+            '正常': 1.0,
+            '延迟干旱': 0.5,
+            '洪水': 0.9,
+            '严重干旱': 0.3,
+            '病虫害': 0.4,
+            '台风': 0.6,
+            '霜冻': 0.1
+          },
+          seasons: { optimal: [1, 2], good: [0], poor: [3] }
+        }
+      },
+
+      // 设备配置 - 重新平衡
+      EQUIPMENT: [
+        {
+          name: "基础灌溉系统",
+          cost: 300,
+          effect: "干旱减损30%",
+          description: "基础的滴灌设备，显著减少干旱对作物的影响",
+          icon: "💧",
+          tier: 1
+        },
+        {
+          name: "防洪堤坝",
+          cost: 450,
+          effect: "洪水减损35%",
+          description: "保护农田免受洪水侵害，提供稳定保护",
+          icon: "🌊",
+          tier: 1
+        },
+        {
+          name: "气象监测站",
+          cost: 600,
+          effect: "天气预警，产量加成20%",
+          description: "提前预知天气变化，优化种植决策",
+          icon: "🌡️",
+          tier: 2
+        },
+        {
+          name: "现代拖拉机",
+          cost: 800,
+          effect: "种植效率提升25%",
+          description: "机械化作业，大幅提高农业生产效率",
+          icon: "🚜",
+          tier: 2
+        },
+        {
+          name: "智能温室",
+          cost: 1500,
+          effect: "全天候保护，产量翻倍",
+          description: "控制环境的高科技农业设施",
+          icon: "🏠",
+          tier: 3
+        },
+        {
+          name: "无人机植保",
+          cost: 1200,
+          effect: "病虫害防治50%，品质提升",
+          description: "精准农业的现代化工具",
+          icon: "🚁",
+          tier: 3
+        },
+        {
+          name: "土壤改良设备",
+          cost: 900,
+          effect: "所有作物基础产量+20%",
+          description: "改善土壤质量，提升作物根本产量",
+          icon: "🌱",
+          tier: 2
+        },
+        {
+          name: "智能传感器网络",
+          cost: 2000,
+          effect: "精确监控，产量+30%，灾害预警",
+          description: "IoT农业的未来技术",
+          icon: "📡",
+          tier: 4
+        },
+        {
+          name: "自动收割机",
+          cost: 1800,
+          effect: "收获效率+50%，减少损失",
+          description: "全自动收割，减少人力依赖",
+          icon: "🤖",
+          tier: 4
+        }
+      ],
+
+      // 政策配置 - 增加更多政策
+      POLICIES: [
+        {
+          name: "出口补贴",
+          effect: () => gameState.incomeMultiplier *= 1.4,
+          description: "政府补贴出口，农产品价格上涨40%",
+          icon: "📈",
+          duration: 2
+        },
+        {
+          name: "种植补贴",
+          effect: () => gameState.equipmentCostMultiplier = 0.6,
+          description: "政府补贴农业设备，购买成本降低40%",
+          icon: "🎁",
+          duration: 3
+        },
+        {
+          name: "紧急救助",
+          effect: () => {
+            gameState.money += 800;
+            gameState.reputation += 10;
+          },
+          description: "政府紧急拨款₹800用于灾后重建",
+          icon: "🆘",
+          duration: 1
+        },
+        {
+          name: "技术推广",
+          effect: () => {
+            gameState.incomeMultiplier *= 1.3;
+            gameState.researchPoints += 20;
+          },
+          description: "新技术推广，农业产量提升30%，获得研发点",
+          icon: "🔬",
+          duration: 4
+        },
+        {
+          name: "环保税收",
+          effect: () => gameState.incomeMultiplier *= 0.8,
+          description: "环保政策实施，部分收入需缴税20%",
+          icon: "🌱",
+          duration: 3
+        },
+        {
+          name: "贸易限制",
+          effect: () => gameState.incomeMultiplier *= 0.65,
+          description: "国际贸易限制，农产品价格下跌35%",
+          icon: "⛔",
+          duration: 2
+        },
+        {
+          name: "合作社推广",
+          effect: () => {
+            gameState.coopBonus += 0.15;
+            gameState.reputation += 15;
+          },
+          description: "政府推广农业合作社，提升合作效益",
+          icon: "🤝",
+          duration: 5
+        },
+        {
+          name: "绿色农业认证",
+          effect: () => {
+            gameState.incomeMultiplier *= 1.2;
+            gameState.reputation += 20;
+          },
+          description: "绿色农业认证，提升产品价值和声望",
+          icon: "🏅",
+          duration: 6
+        }
+      ],
+
+      // 天气事件配置 - 重新平衡
+      WEATHER_EVENTS: [
+        { type: "正常", probability: 0.35, yieldFactor: 1.0, icon: "☀️" },
+        { type: "延迟干旱", probability: 0.18, yieldFactor: 0.65, icon: "🌵" },
+        { type: "洪水", probability: 0.15, yieldFactor: 0.75, icon: "🌊" },
+        { type: "严重干旱", probability: 0.12, yieldFactor: 0.35, icon: "🏜️" },
+        { type: "病虫害", probability: 0.10, yieldFactor: 0.55, icon: "🐛" },
+        { type: "台风", probability: 0.06, yieldFactor: 0.25, icon: "🌀" },
+        { type: "霜冻", probability: 0.04, yieldFactor: 0.45, icon: "❄️" }
+      ],
+
+      // 季节配置
+      SEASONS: ["春季", "夏季", "秋季", "冬季"],
+      
+      // 季节效果配置
+      SEASON_EFFECTS: {
+        0: { name: "春季", description: "万物复苏，作物生长良好", modifier: 1.1 },
+        1: { name: "夏季", description: "阳光充足，但需注意干旱", modifier: 1.0 },
+        2: { name: "秋季", description: "收获季节，产量稍有提升", modifier: 1.05 },
+        3: { name: "冬季", description: "寒冷季节，作物生长缓慢", modifier: 0.9 }
+      },
+
+      // 研发系统配置
+      RESEARCH: [
+        {
+          id: "drought_resistance",
+          name: "抗旱技术",
+          cost: 50,
+          effect: () => gameState.droughtResistance += 0.2,
+          description: "提升作物抗旱能力20%",
+          icon: "🌵",
+          category: "cultivation"
+        },
+        {
+          id: "pest_control",
+          name: "生物防治",
+          cost: 60,
+          effect: () => gameState.pestResistance += 0.25,
+          description: "提升病虫害抗性25%",
+          icon: "🐛",
+          category: "protection"
+        },
+        {
+          id: "yield_enhancement",
+          name: "高产技术",
+          cost: 80,
+          effect: () => gameState.yieldBonus += 0.15,
+          description: "基础产量提升15%",
+          icon: "🌾",
+          category: "cultivation"
+        },
+        {
+          id: "market_analysis",
+          name: "市场分析",
+          cost: 70,
+          effect: () => gameState.marketInsight = true,
+          description: "提前预知市场价格趋势",
+          icon: "📊",
+          category: "economics"
+        },
+        {
+          id: "weather_prediction",
+          name: "天气预测",
+          cost: 90,
+          effect: () => gameState.weatherPrediction = true,
+          description: "提前一轮预知天气变化",
+          icon: "🌦️",
+          category: "technology"
+        },
+        {
+          id: "soil_optimization",
+          name: "土壤优化",
+          cost: 100,
+          effect: () => gameState.soilQuality += 0.2,
+          description: "土壤质量提升，全面增产20%",
+          icon: "🌍",
+          category: "cultivation"
+        },
+        {
+          id: "automation",
+          name: "农业自动化",
+          cost: 150,
+          effect: () => gameState.automation += 0.3,
+          description: "自动化程度提升，减少人力需求",
+          icon: "🤖",
+          category: "technology"
+        },
+        {
+          id: "climate_adaptation",
+          name: "气候适应",
+          cost: 120,
+          effect: () => gameState.climateAdaptation += 0.25,
+          description: "提升所有极端天气适应性25%",
+          icon: "🌡️",
+          category: "protection"
+        }
+      ],
+
+      // 合作社系统配置
+      COOPERATIVES: [
+        {
+          id: "grain_coop",
+          name: "粮食合作社",
+          cost: 500,
+          effect: () => gameState.grainPriceBonus += 0.2,
+          description: "粮食作物售价提升20%",
+          icon: "🌾",
+          members: 0,
+          maxMembers: 50
+        },
+        {
+          id: "equipment_coop",
+          name: "设备共享合作社",
+          cost: 800,
+          effect: () => gameState.equipmentCostMultiplier *= 0.8,
+          description: "设备购买成本降低20%",
+          icon: "🚜",
+          members: 0,
+          maxMembers: 30
+        },
+        {
+          id: "insurance_coop",
+          name: "保险互助社",
+          cost: 600,
+          effect: () => gameState.insuranceCostMultiplier *= 0.7,
+          description: "保险费用降低30%",
+          icon: "🛡️",
+          members: 0,
+          maxMembers: 40
+        }
+      ],
+
+      // 成就配置 - 大幅增加
+      ACHIEVEMENTS: [
+        // 基础成就
+        {
+          id: "first_harvest",
+          name: "初次收获",
+          description: "完成第一次农作物收获",
+          icon: "🌾",
+          type: "basic",
+          condition: () => gameState.totalHarvests >= 1,
+          reward: { money: 100, reputation: 5 }
+        },
+        {
+          id: "rich_farmer",
+          name: "富裕农民",
+          description: "累积资金达到₹5000",
+          icon: "💰",
+          type: "economic",
+          condition: () => gameState.money >= 5000,
+          reward: { reputation: 10, researchPoints: 10 }
+        },
+        {
+          id: "weather_master",
+          name: "天气大师",
+          description: "连续7年成功应对极端天气",
+          icon: "🌦️",
+          type: "survival",
+          condition: () => gameState.consecutiveWeatherSuccess >= 7,
+          reward: { money: 500, reputation: 15 }
+        },
+        {
+          id: "equipment_king",
+          name: "设备大王",
+          description: "拥有所有类型的农业设备",
+          icon: "🔧",
+          type: "progression",
+          condition: () => gameState.equipment.length >= 6,
+          reward: { reputation: 20, researchPoints: 25 }
+        },
+        {
+          id: "master_farmer",
+          name: "农业大师",
+          description: "农民等级达到15级",
+          icon: "👨‍🌾",
+          type: "progression",
+          condition: () => gameState.farmerLevel >= 15,
+          reward: { money: 1000, reputation: 25 }
+        },
+        
+        // 专业成就
+        {
+          id: "crop_specialist",
+          name: "作物专家",
+          description: "种植过所有类型的作物",
+          icon: "🌿",
+          type: "exploration",
+          condition: () => Object.keys(gameState.cropsPlanted || {}).length >= 10,
+          reward: { reputation: 15, researchPoints: 20 }
+        },
+        {
+          id: "disaster_survivor",
+          name: "灾难幸存者",
+          description: "成功度过10次极端天气事件",
+          icon: "⛈️",
+          type: "survival",
+          condition: () => gameState.extremeWeatherSurvived >= 10,
+          reward: { money: 800, reputation: 20 }
+        },
+        {
+          id: "market_genius",
+          name: "市场天才",
+          description: "单次交易获利超过₹2000",
+          icon: "📈",
+          type: "economic",
+          condition: () => gameState.maxSingleProfit >= 2000,
+          reward: { reputation: 15, researchPoints: 15 }
+        },
+        {
+          id: "researcher",
+          name: "农业研究者",
+          description: "完成5项研发项目",
+          icon: "🔬",
+          type: "technology",
+          condition: () => gameState.completedResearch.length >= 5,
+          reward: { researchPoints: 50, reputation: 20 }
+        },
+        {
+          id: "community_leader",
+          name: "社区领袖",
+          description: "加入3个合作社",
+          icon: "👥",
+          type: "social",
+          condition: () => gameState.joinedCoops.length >= 3,
+          reward: { reputation: 30, money: 500 }
+        },
+        
+        // 隐藏成就
+        {
+          id: "lucky_farmer",
+          name: "幸运农民",
+          description: "连续5年遇到正常天气",
+          icon: "🍀",
+          type: "hidden",
+          condition: () => gameState.consecutiveNormalWeather >= 5,
+          reward: { money: 1000, reputation: 10 }
+        },
+        {
+          id: "risk_taker",
+          name: "冒险家",
+          description: "在负债状态下获得大丰收",
+          icon: "💎",
+          type: "hidden",
+          condition: () => gameState.riskTakingSuccess === true,
+          reward: { reputation: 25, researchPoints: 30 }
+        },
+        {
+          id: "perfectionist",
+          name: "完美主义者",
+          description: "连续10年无任何损失",
+          icon: "⭐",
+          type: "hidden",
+          condition: () => gameState.perfectYears >= 10,
+          reward: { money: 2000, reputation: 35 }
+        },
+        {
+          id: "comeback_king",
+          name: "逆境重生",
+          description: "从破产边缘恢复到₹10000资金",
+          icon: "👑",
+          type: "hidden",
+          condition: () => gameState.comebackSuccess === true,
+          reward: { reputation: 40, researchPoints: 50 }
+        },
+        {
+          id: "reputation_legend",
+          name: "声望传奇",
+          description: "声望达到200点",
+          icon: "🏆",
+          type: "legendary",
+          condition: () => gameState.reputation >= 200,
+          reward: { money: 5000, researchPoints: 100 }
+        },
+        
+        // 长期成就
+        {
+          id: "veteran_farmer",
+          name: "资深农民",
+          description: "经营农场30年",
+          icon: "🗓️",
+          type: "longevity",
+          condition: () => gameState.year >= 30,
+          reward: { reputation: 50, money: 3000 }
+        },
+        {
+          id: "millionaire",
+          name: "百万富翁",
+          description: "累积总收入达到₹100000",
+          icon: "💎",
+          type: "economic",
+          condition: () => gameState.totalIncome >= 100000,
+          reward: { reputation: 60, researchPoints: 75 }
+        },
+        {
+          id: "population_booster",
+          name: "人口繁荣",
+          description: "人口增长到1000人",
+          icon: "🏘️",
+          type: "social",
+          condition: () => gameState.population >= 1000,
+          reward: { reputation: 40, money: 2000 }
+        },
+        
+        // 特殊成就
+        {
+          id: "extreme_survivor",
+          name: "极限生存者",
+          description: "在地狱难度下存活20年",
+          icon: "🔥",
+          type: "special",
+          condition: () => gameState.difficulty >= 90 && gameState.year >= 20,
+          reward: { reputation: 100, money: 10000 }
+        },
+        {
+          id: "innovation_pioneer",
+          name: "创新先锋",
+          description: "完成所有研发项目",
+          icon: "🚀",
+          type: "special",
+          condition: () => gameState.completedResearch.length >= GAME_CONFIG.RESEARCH.length,
+          reward: { reputation: 80, money: 5000 }
+        }
+      ]
+    };
+
+    // 教程步骤
+    const tutorialSteps = [
+      "欢迎来到季风决策者增强版！这是一个更加丰富和平衡的农业管理游戏。",
+      "观察右上角的状态栏，除了基础信息外，还增加了声望和研发点数系统。",
+      "选择合适的作物是成功的关键。注意季节效果对不同作物的影响。",
+      "购买农业设备可以大幅提升抗灾能力和产量，现在设备有等级划分。",
+      "关注市场价格波动，新增的市场分析可以帮助您预测价格趋势。",
+      "声望系统影响您的社会地位，高声望可以获得更多机会和折扣。",
+      "研发中心可以解锁新技术，提升农场的各项能力。",
+      "合作社系统让您可以与其他农民合作，获得集体优势。",
+      "成就系统更加丰富，包含隐藏成就和特殊挑战。",
+      "建议在教学模式下熟悉新机制，然后挑战更高难度！"
+    ];
+    let currentTutorialStep = 0;
+
+    // 游戏状态 - 增强版
+    let gameState = {
+      // 基础状态
+      money: 2000,
+      population: 200,
+      year: 1,
+      season: 0,
+      farmerLevel: 1,
+      
+      // 作物相关
+      currentCrop: null,
+      crops: {
+        wheat: 200,
+        rice: 0,
+        corn: 0,
+        sorghum: 0,
+        cotton: 0,
+        tea: 0,
+        sugarcane: 0,
+        rubber: 0,
+        coffee: 0,
+        cocoa: 0
+      },
+      cropPrices: {},
+      cropsPlanted: {},
+      
+      // 设备和政策
+      equipment: [],
+      currentPolicy: null,
+      policyDuration: 0,
+      
+      // 游戏机制
+      gameMode: 'tutorial',
+      difficulty: 50,
+      challengeYears: 20,
+      birthplace: 'china-north',
+      
+      // 统计数据
+      totalHarvests: 0,
+      totalIncome: 0,
+      consecutiveWeatherSuccess: 0,
+      consecutiveNormalWeather: 0,
+      extremeWeatherSurvived: 0,
+      perfectYears: 0,
+      maxSingleProfit: 0,
+      history: [],
+      achievements: [],
+      
+      // 技能经验
+      plantingExp: 0,
+      managementExp: 0,
+      marketExp: 0,
+      plantingLevel: 1,
+      managementLevel: 1,
+      marketLevel: 1,
+      
+      // 经济系统
+      debt: 0,
+      insurance: false,
+      
+      // 新增：声望系统
+      reputation: 50,
+      reputationLevel: "新手农民",
+      
+      // 新增：研发系统
+      researchPoints: 0,
+      completedResearch: [],
+      ongoingResearch: null,
+      researchProgress: 0,
+      
+      // 新增：合作社系统
+      joinedCoops: [],
+      coopBonus: 0,
+      
+      // 新增：增强属性
+      droughtResistance: 0,
+      pestResistance: 0,
+      yieldBonus: 0,
+      soilQuality: 0,
+      automation: 0,
+      climateAdaptation: 0,
+      
+      // 新增：市场洞察
+      marketInsight: false,
+      weatherPrediction: false,
+      nextWeatherEvent: null,
+      
+      // 修饰符
+      incomeMultiplier: 1,
+      equipmentCostMultiplier: 1,
+      insuranceCostMultiplier: 1,
+      grainPriceBonus: 0,
+      climateRisk: 30,
+      
+      // 成就相关
+      riskTakingSuccess: false,
+      comebackSuccess: false
+    };
+
+    // 初始化作物价格
+    function initializePrices() {
+      Object.keys(GAME_CONFIG.CROPS).forEach(cropName => {
+        const cropKey = getCropKey(cropName);
+        gameState.cropPrices[cropKey] = GAME_CONFIG.CROPS[cropName].basePrice;
+      });
+    }
+
+    // 获取作物键值映射
+    function getCropKey(cropName) {
+      const cropMap = {
+        '水稻': 'rice',
+        '小麦': 'wheat',
+        '玉米': 'corn',
+        '高粱': 'sorghum',
+        '棉花': 'cotton',
+        '茶叶': 'tea',
+        '甘蔗': 'sugarcane',
+        '橡胶': 'rubber',
+        '咖啡': 'coffee',
+        '可可': 'cocoa'
+      };
+      return cropMap[cropName];
+    }
+
+    // 获取作物中文名
+    function getCropName(cropKey) {
+      const nameMap = {
+        'rice': '水稻',
+        'wheat': '小麦',
+        'corn': '玉米',
+        'sorghum': '高粱',
+        'cotton': '棉花',
+        'tea': '茶叶',
+        'sugarcane': '甘蔗',
+        'rubber': '橡胶',
+        'coffee': '咖啡',
+        'cocoa': '可可'
+      };
+      return nameMap[cropKey];
+    }
+
+    // 模式选择相关函数
+    document.addEventListener('DOMContentLoaded', function() {
+      const gameModeRadios = document.querySelectorAll('input[name="game-mode"]');
+      const challengeSettings = document.getElementById('challenge-settings');
+      
+      gameModeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+          if (this.value === 'challenge') {
+            challengeSettings.style.display = 'block';
+          } else {
+            challengeSettings.style.display = 'none';
+          }
+        });
+      });
+      
+      initializePrices();
+      updateDisplay();
+      updateMarketPanel();
+      updateEquipmentPanel();
+      updateAchievementPanel();
+    });
+
+    function startSettings() {
+      const gameMode = document.querySelector('input[name="game-mode"]:checked').value;
+      gameState.gameMode = gameMode;
+      
+      if (gameMode === 'challenge') {
+        gameState.challengeYears = parseInt(document.getElementById('challenge-years').value);
+      }
+      
+      gameState.difficulty = parseInt(document.getElementById('difficulty').value);
+      gameState.climateRisk = gameState.difficulty;
+      
+      // 根据难度调整初始资源
+      if (gameState.difficulty <= 25) {
+        gameState.money = 3000;
+        gameState.reputation = 60;
+      } else if (gameState.difficulty >= 90) {
+        gameState.money = 1200;
+        gameState.reputation = 30;
+        gameState.climateRisk += 20;
+      }
+      
+      document.getElementById('mode-selection-modal').style.display = 'none';
+      document.getElementById('settings-modal').style.display = 'flex';
+    }
+
+    function startGame() {
+      const birthplaceElement = document.querySelector('input[name="birthplace"]:checked');
+      if (birthplaceElement) {
+        gameState.birthplace = birthplaceElement.value;
+      }
+      
+      // 根据出生地调整初始条件
+      adjustInitialConditions();
+      
+      document.getElementById('settings-modal').style.display = 'none';
+      
+      if (gameState.gameMode === 'tutorial') {
+        document.getElementById('tutorial-overlay').style.display = 'flex';
+      }
+      
+      updateDisplay();
+      updateSeasonEffect();
+      addLog("游戏开始！欢迎来到农业经营的新世界！", "success");
+    }
+
+    // 根据出生地调整初始条件
+    function adjustInitialConditions() {
+      const adjustments = {
+        'china-north': { 
+          money: 500, reputation: 10, crops: { wheat: 100 },
+          bonus: "小麦产量+20%", resistance: "寒冷适应" 
+        },
+        'china-south': { 
+          money: 300, reputation: 15, crops: { rice: 150 },
+          bonus: "水稻产量+25%", resistance: "湿润适应" 
+        },
+        'china-west': { 
+          money: 200, reputation: 5, crops: { sorghum: 80 },
+          bonus: "干旱抗性+30%", resistance: "干旱适应" 
+        },
+        'russia-south': { 
+          money: 600, reputation: 8, crops: { wheat: 120 },
+          bonus: "机械化优势", resistance: "寒冷适应" 
+        },
+        'russia-west': { 
+          money: 400, reputation: 5, crops: { wheat: 80 },
+          bonus: "极地作物适应", resistance: "极寒适应" 
+        },
+        'russia-east': { 
+          money: 350, reputation: 12, crops: { corn: 90 },
+          bonus: "边境贸易优势", resistance: "多变适应" 
+        },
+        'sea-thailand': { 
+          money: 400, reputation: 18, crops: { rice: 180 },
+          bonus: "热带作物+30%", resistance: "高温适应" 
+        },
+        'sea-vietnam': { 
+          money: 350, reputation: 15, crops: { rice: 160 },
+          bonus: "季风适应+25%", resistance: "季风适应" 
+        },
+        'sea-indonesia': { 
+          money: 450, reputation: 20, crops: { sugarcane: 100 },
+          bonus: "多岛贸易网络", resistance: "海洋气候" 
+        },
+        'india-north': { 
+          money: 300, reputation: 12, crops: { wheat: 140 },
+          bonus: "人口红利", resistance: "季风适应" 
+        },
+        'india-south': { 
+          money: 380, reputation: 22, crops: { tea: 60 },
+          bonus: "香料贸易+40%", resistance: "热带适应" 
+        },
+        'india-east': { 
+          money: 320, reputation: 16, crops: { rice: 170 },
+          bonus: "季风前沿优势", resistance: "极端天气" 
+        },
+        'africa-east': { 
+          money: 250, reputation: 8, crops: { coffee: 40 },
+          bonus: "咖啡产量+50%", resistance: "高原适应" 
+        },
+        'africa-west': { 
+          money: 280, reputation: 10, crops: { cocoa: 35 },
+          bonus: "可可产量+60%", resistance: "热带适应" 
+        },
+        'africa-south': { 
+          money: 420, reputation: 14, crops: { corn: 110 },
+          bonus: "多样化农业", resistance: "草原适应" 
+        }
+      };
+      
+      const adjustment = adjustments[gameState.birthplace];
+      if (adjustment) {
+        gameState.money += adjustment.money;
+        gameState.reputation += adjustment.reputation;
+        
+        // 添加初始作物
+        Object.keys(adjustment.crops).forEach(cropKey => {
+          gameState.crops[cropKey] += adjustment.crops[cropKey];
+        });
+        
+        // 记录特殊优势
+        gameState.birthplaceBonus = adjustment.bonus;
+        gameState.climateResistance = adjustment.resistance;
+        
+        addLog(`出生地特色：${adjustment.bonus}`, "info");
+      }
+    }
+
+    // 教程系统
+    function nextTutorial() {
+      currentTutorialStep++;
+      if (currentTutorialStep < tutorialSteps.length) {
+        document.getElementById('tutorial-text').textContent = tutorialSteps[currentTutorialStep];
+      } else {
+        skipTutorial();
+      }
+    }
+
+    function skipTutorial() {
+      document.getElementById('tutorial-overlay').style.display = 'none';
+      addLog("教程完成，开始您的农业之旅！", "success");
+    }
+
+    // 选择作物
+    function chooseCrop(cropName) {
+      if (!gameState.currentCrop || gameState.currentCrop !== cropName) {
+        gameState.currentCrop = cropName;
+        
+        // 记录种植过的作物
+        if (!gameState.cropsPlanted) gameState.cropsPlanted = {};
+        gameState.cropsPlanted[cropName] = true;
+        
+        document.getElementById('current-crop-display').textContent = cropName;
+        
+        // 更新按钮状态
+        document.querySelectorAll('.crop-button').forEach(btn => {
+          btn.classList.remove('selected');
+        });
+        document.querySelector(`[data-crop="${cropName}"]`).classList.add('selected');
+        
+        // 检查季节适应性
+        const crop = GAME_CONFIG.CROPS[cropName];
+        const currentSeason = gameState.season;
+        let seasonFeedback = "";
+        
+        if (crop.seasons.optimal.includes(currentSeason)) {
+          seasonFeedback = "最适季节！";
+        } else if (crop.seasons.good.includes(currentSeason)) {
+          seasonFeedback = "适宜季节";
+        } else if (crop.seasons.poor.includes(currentSeason)) {
+          seasonFeedback = "不适季节，产量会降低";
+        }
+        
+        if (seasonFeedback) {
+          addLog(`选择${cropName} - ${seasonFeedback}`, seasonFeedback.includes("不适") ? "warning" : "info");
+        } else {
+          addLog(`选择作物：${cropName}`, "info");
+        }
+        
+        gainExperience('planting', 5);
+      }
+    }
+
+    // 下一回合
+    function nextTurn() {
+      if (!gameState.currentCrop) {
+        addLog("请先选择要种植的作物！", "warning");
+        return;
+      }
+      
+      // 天气预测功能
+      if (gameState.weatherPrediction && gameState.nextWeatherEvent) {
+        addLog(`天气预测：下一轮将是${gameState.nextWeatherEvent.type}`, "info");
+      }
+      
+      // 生成天气事件
+      const weatherEvent = generateWeatherEvent();
+      
+      // 为下一轮预测天气
+      if (gameState.weatherPrediction) {
+        gameState.nextWeatherEvent = generateWeatherEvent();
+      }
+      
+      // 应用政策
+      applyCurrentPolicy();
+      applyRandomPolicy();
+      
+      // 计算收获
+      const harvestResult = calculateHarvest(weatherEvent);
+      
+      // 更新游戏状态
+      updateGameState(harvestResult, weatherEvent);
+      
+      // 更新地图显示
+      updateMapDisplay(weatherEvent);
+      
+      // 更新人口
+      updatePopulation();
+      
+      // 更新市场价格
+      updateMarketPrices();
+      
+      // 更新农民等级
+      updateFarmerLevel();
+      
+      // 更新声望
+      updateReputation(harvestResult, weatherEvent);
+      
+      // 增加研发点数
+      const researchGain = Math.max(1, Math.floor(gameState.farmerLevel / 3));
+      gameState.researchPoints += researchGain;
+      
+      // 处理研发进度
+      if (gameState.ongoingResearch) {
+        updateResearchProgress();
+      }
+      
+      // 检查成就
+      checkAchievements();
+      
+      // 更新界面
+      updateDisplay();
+      updateMarketPanel();
+      updateEquipmentPanel();
+      updateAchievementPanel();
+      
+      // 检查游戏结束条件
+      checkGameOver();
+      
+      // 增加回合
+      gameState.year++;
+      gameState.season = (gameState.season + 1) % 4;
+      updateSeasonEffect();
+      
+      // 重置政策持续时间
+      if (gameState.policyDuration > 0) {
+        gameState.policyDuration--;
+        if (gameState.policyDuration <= 0) {
+          gameState.currentPolicy = null;
+          document.getElementById('policy-effect').style.display = 'none';
+          addLog("政策效果结束", "info");
+        }
+      }
+      
+      const logMessage = `第${gameState.year-1}年结束：${weatherEvent.type}，收获${harvestResult.quantity}单位${gameState.currentCrop}，收入₹${harvestResult.income}`;
+      addLog(logMessage, "success");
+      
+      // 记录历史
+      gameState.history.push({
+        year: gameState.year - 1,
+        weather: weatherEvent.type,
+        income: harvestResult.income,
+        crop: gameState.currentCrop,
+        quantity: harvestResult.quantity
+      });
+      
+      updateHistoryDisplay();
+    }
+
+    // 生成天气事件 - 增强版
+    function generateWeatherEvent() {
+      const random = Math.random();
+      let cumulativeProbability = 0;
+      
+      // 根据气候风险和季节调整概率
+      const seasonModifier = {
+        0: { drought: 0.8, flood: 1.2, normal: 1.1 }, // 春季
+        1: { drought: 1.3, flood: 0.9, normal: 0.9 }, // 夏季
+        2: { drought: 1.1, flood: 1.1, normal: 1.0 }, // 秋季
+        3: { drought: 0.7, flood: 0.8, normal: 1.2 }  // 冬季
+      };
+      
+      const adjustedEvents = GAME_CONFIG.WEATHER_EVENTS.map(event => {
+        let adjustedProbability = event.probability;
+        
+        // 气候风险影响
+        if (event.type === "正常") {
+          adjustedProbability *= (1 - gameState.climateRisk / 150);
+        } else {
+          adjustedProbability *= (1 + gameState.climateRisk / 200);
+        }
+        
+        // 季节影响
+        const season = seasonModifier[gameState.season];
+        if (event.type.includes("干旱") && season.drought) {
+          adjustedProbability *= season.drought;
+        } else if (event.type === "洪水" && season.flood) {
+          adjustedProbability *= season.flood;
+        } else if (event.type === "正常" && season.normal) {
+          adjustedProbability *= season.normal;
+        }
+        
+        return { ...event, adjustedProbability };
+      });
+      
+      // 重新标准化概率
+      const totalProbability = adjustedEvents.reduce((sum, event) => sum + event.adjustedProbability, 0);
+      adjustedEvents.forEach(event => {
+        event.adjustedProbability /= totalProbability;
+      });
+      
+      for (const event of adjustedEvents) {
+        cumulativeProbability += event.adjustedProbability;
+        if (random <= cumulativeProbability) {
+          return event;
+        }
+      }
+      
+      return GAME_CONFIG.WEATHER_EVENTS[0]; // 默认返回正常天气
+    }
+
+    // 应用当前政策效果
+    function applyCurrentPolicy() {
+      if (gameState.currentPolicy && gameState.policyDuration > 0) {
+        // 重置修饰符
+        gameState.incomeMultiplier = 1;
+        gameState.equipmentCostMultiplier = 1;
+        
+        // 应用政策效果
+        gameState.currentPolicy.effect();
+      }
+    }
+
+    // 应用随机政策
+    function applyRandomPolicy() {
+      if (Math.random() < 0.25) { // 25% 概率触发政策
+        const policy = GAME_CONFIG.POLICIES[Math.floor(Math.random() * GAME_CONFIG.POLICIES.length)];
+        gameState.currentPolicy = policy;
+        gameState.policyDuration = policy.duration || 2;
+        
+        document.getElementById('policy-effect').style.display = 'block';
+        document.getElementById('policy-text').textContent = `${policy.icon} ${policy.name}: ${policy.description}`;
+        
+        addLog(`新政策颁布：${policy.name}（持续${gameState.policyDuration}年）`, "warning");
+        
+        // 增加管理经验
+        gainExperience('management', 15);
+      } else if (gameState.policyDuration <= 0) {
+        gameState.currentPolicy = null;
+        document.getElementById('policy-effect').style.display = 'none';
+      }
+    }
+
+    // 计算收获 - 增强版
+    function calculateHarvest(weatherEvent) {
+      const crop = GAME_CONFIG.CROPS[gameState.currentCrop];
+      let yieldModifier = crop.modifiers[weatherEvent.type] || 0.5;
+      
+      // 季节效果
+      const seasonEffect = GAME_CONFIG.SEASON_EFFECTS[gameState.season];
+      const currentSeason = gameState.season;
+      
+      if (crop.seasons.optimal.includes(currentSeason)) {
+        yieldModifier *= 1.2;
+      } else if (crop.seasons.good.includes(currentSeason)) {
+        yieldModifier *= 1.0;
+      } else if (crop.seasons.poor.includes(currentSeason)) {
+        yieldModifier *= 0.7;
+      }
+      
+      yieldModifier *= seasonEffect.modifier;
+      
+      // 设备加成 - 重新计算
+      gameState.equipment.forEach(equipment => {
+        switch(equipment.name) {
+          case "基础灌溉系统":
+            if (weatherEvent.type.includes("干旱")) {
+              yieldModifier *= 1.3;
+            }
+            break;
+          case "防洪堤坝":
+            if (weatherEvent.type === "洪水") {
+              yieldModifier *= 1.35;
+            }
+            break;
+          case "气象监测站":
+            yieldModifier *= 1.2;
+            break;
+          case "现代拖拉机":
+            yieldModifier *= 1.25;
+            break;
+          case "智能温室":
+            yieldModifier *= 2.0;
+            break;
+          case "无人机植保":
+            if (weatherEvent.type === "病虫害") {
+              yieldModifier *= 1.5;
+            }
+            yieldModifier *= 1.15;
+            break;
+          case "土壤改良设备":
+            yieldModifier *= 1.2;
+            break;
+          case "智能传感器网络":
+            yieldModifier *= 1.3;
+            if (weatherEvent.type !== "正常") {
+              yieldModifier *= 1.1; // 额外灾害预警
+            }
+            break;
+          case "自动收割机":
+            yieldModifier *= 1.15; // 减少收获损失
+            break;
+        }
+      });
+      
+      // 技能加成 - 重新计算
+      const skillBonus = 1 + (gameState.plantingExp / 800);
+      yieldModifier *= skillBonus;
+      
+      // 研发加成
+      yieldModifier *= (1 + gameState.yieldBonus);
+      yieldModifier *= (1 + gameState.soilQuality);
+      
+      // 抗性加成
+      if (weatherEvent.type.includes("干旱")) {
+        yieldModifier *= (1 + gameState.droughtResistance);
+      }
+      if (weatherEvent.type === "病虫害") {
+        yieldModifier *= (1 + gameState.pestResistance);
+      }
+      if (weatherEvent.type !== "正常") {
+        yieldModifier *= (1 + gameState.climateAdaptation);
+      }
+      
+      // 声望加成
+      const reputationBonus = Math.min(0.3, gameState.reputation / 500);
+      yieldModifier *= (1 + reputationBonus);
+      
+      // 合作社加成
+      yieldModifier *= (1 + gameState.coopBonus);
+      
+      // 计算最终产量和收入
+      const baseQuantity = crop.baseYield;
+      const quantity = Math.max(1, Math.round(baseQuantity * yieldModifier));
+      
+      let basePrice = crop.basePrice * gameState.incomeMultiplier;
+      
+      // 粮食作物价格加成
+      const grainCrops = ['水稻', '小麦', '玉米', '高粱'];
+      if (grainCrops.includes(gameState.currentCrop)) {
+        basePrice *= (1 + gameState.grainPriceBonus);
+      }
+      
+      const income = Math.round(quantity * basePrice);
+      
+      return { quantity, income };
+    }
+
+    // 更新游戏状态 - 增强版
+    function updateGameState(harvestResult, weatherEvent) {
+      gameState.money += harvestResult.income;
+      gameState.totalIncome += harvestResult.income;
+      gameState.totalHarvests++;
+      
+      // 检查单次最大收益
+      if (harvestResult.income > gameState.maxSingleProfit) {
+        gameState.maxSingleProfit = harvestResult.income;
+      }
+      
+      // 检查负债状态下的成功
+      if (gameState.debt > gameState.money && harvestResult.income > 1000) {
+        gameState.riskTakingSuccess = true;
+      }
+      
+      // 检查从破产边缘恢复
+      if (gameState.money < 500 && gameState.money + harvestResult.income >= 10000) {
+        gameState.comebackSuccess = true;
+      }
+      
+      // 添加收获的作物到仓库
+      const cropKey = getCropKey(gameState.currentCrop);
+      gameState.crops[cropKey] += harvestResult.quantity;
+      
+      // 更新气候风险
+      gameState.climateRisk = Math.min(100, gameState.climateRisk + 1.5);
+      
+      // 统计天气事件
+      if (weatherEvent.type === "正常") {
+        gameState.consecutiveNormalWeather++;
+        gameState.consecutiveWeatherSuccess++;
+      } else {
+        gameState.consecutiveNormalWeather = 0;
+        gameState.extremeWeatherSurvived++;
+        if (harvestResult.quantity > 0) {
+          gameState.consecutiveWeatherSuccess++;
+        } else {
+          gameState.consecutiveWeatherSuccess = 0;
+        }
+      }
+      
+      // 完美年统计
+      if (harvestResult.income >= crop.basePrice * crop.baseYield * 0.8) {
+        gameState.perfectYears++;
+      } else {
+        gameState.perfectYears = 0;
+      }
+      
+      // 增加经验
+      gainExperience('planting', 12);
+      
+      // 处理债务利息
+      if (gameState.debt > 0) {
+        const interest = Math.round(gameState.debt * 0.08);
+        gameState.debt += interest;
+        if (interest > 0) {
+          addLog(`债务利息：₹${interest}`, "warning");
+        }
+      }
+    }
+
+    // 更新季节效果
+    function updateSeasonEffect() {
+      const seasonEffect = GAME_CONFIG.SEASON_EFFECTS[gameState.season];
+      document.getElementById('season-text').textContent = `${seasonEffect.name}：${seasonEffect.description}`;
+    }
+
+    // 更新声望系统
+    function updateReputation(harvestResult, weatherEvent) {
+      let reputationChange = 0;
+      
+      // 基础声望变化
+      if (harvestResult.income > 1000) {
+        reputationChange += 2;
+      } else if (harvestResult.income < 200) {
+        reputationChange -= 1;
+      }
+      
+      // 天气应对能力
+      if (weatherEvent.type !== "正常" && harvestResult.quantity > 0) {
+        reputationChange += 3;
+      }
+      
+      // 人口维持
+      if (gameState.population > 500) {
+        reputationChange += 1;
+      }
+      
+      gameState.reputation += reputationChange;
+      gameState.reputation = Math.max(0, Math.min(300, gameState.reputation));
+      
+      // 更新声望等级
+      updateReputationLevel();
+    }
+
+    function updateReputationLevel() {
+      const levels = [
+        { min: 0, max: 25, name: "新手农民", desc: "刚刚开始农业生涯" },
+        { min: 25, max: 50, name: "初级农民", desc: "已有基础经验" },
+        { min: 50, max: 80, name: "熟练农民", desc: "技能日渐成熟" },
+        { min: 80, max: 120, name: "专业农民", desc: "在当地小有名气" },
+        { min: 120, max: 160, name: "农业专家", desc: "被同行认可" },
+        { min: 160, max: 200, name: "农业大师", desc: "区域知名农业专家" },
+        { min: 200, max: 250, name: "农业权威", desc: "全国知名的农业专家" },
+        { min: 250, max: 300, name: "农业传奇", desc: "传奇般的农业大师" }
+      ];
+      
+      const currentLevel = levels.find(level => 
+        gameState.reputation >= level.min && gameState.reputation < level.max
+      );
+      
+      if (currentLevel) {
+        gameState.reputationLevel = currentLevel.name;
+        document.getElementById('reputation-level').textContent = currentLevel.name;
+        document.getElementById('reputation-desc').textContent = currentLevel.desc;
+        
+        // 更新声望指示器位置
+        const percentage = ((gameState.reputation - currentLevel.min) / (currentLevel.max - currentLevel.min)) * 100;
+        document.getElementById('reputation-indicator').style.left = `${percentage}%`;
+      }
+    }
+
+    // 经验值系统 - 增强版
+    function gainExperience(type, amount) {
+      const oldLevel = gameState[`${type}Level`];
+      gameState[`${type}Exp`] += amount;
+      
+      // 计算新等级
+      const newLevel = Math.floor(gameState[`${type}Exp`] / 100) + 1;
+      
+      if (newLevel > oldLevel) {
+        gameState[`${type}Level`] = newLevel;
+        addLog(`${type === 'planting' ? '种植' : type === 'management' ? '管理' : '市场'}技能升级到${newLevel}级！`, "success");
+        
+        // 升级奖励
+        gameState.reputation += 5;
+        gameState.researchPoints += 10;
+      }
+    }
+
+    // 更新农民等级
+    function updateFarmerLevel() {
+      const totalExp = gameState.plantingExp + gameState.managementExp + gameState.marketExp;
+      const newLevel = Math.floor(totalExp / 200) + 1;
+      
+      if (newLevel > gameState.farmerLevel) {
+        gameState.farmerLevel = newLevel;
+        addLog(`农民等级提升到${newLevel}级！`, "success");
+        gameState.reputation += 10;
+        gameState.researchPoints += 15;
+      }
+    }
+
+    // 更新技能显示
+    function updateSkillDisplay() {
+      const skills = ['planting', 'management', 'market'];
+      skills.forEach(skill => {
+        const exp = gameState[`${skill}Exp`];
+        const level = gameState[`${skill}Level`];
+        const expNeeded = level * 100;
+        const currentLevelExp = exp % 100;
+        
+        document.getElementById(`${skill}-exp`).textContent = currentLevelExp;
+        document.getElementById(`${skill}-exp-needed`).textContent = 100;
+        document.getElementById(`${skill}-progress`).style.width = `${currentLevelExp}%`;
+      });
+    }
+
+    // 更新市场价格 - 增强版
+    function updateMarketPrices() {
+      Object.keys(gameState.cropPrices).forEach(cropKey => {
+        const baseCrop = Object.keys(GAME_CONFIG.CROPS).find(key => getCropKey(key) === cropKey);
+        if (baseCrop) {
+          const basePrice = GAME_CONFIG.CROPS[baseCrop].basePrice;
+          
+          // 更复杂的价格波动
+          const volatility = 0.15 + (gameState.difficulty / 500);
+          const seasonalEffect = Math.sin((gameState.year + gameState.season) * 0.5) * 0.1;
+          const randomEffect = (Math.random() - 0.5) * volatility;
+          const trendEffect = Math.sin(gameState.year * 0.2) * 0.08;
+          
+          let newPrice = basePrice * (1 + seasonalEffect + randomEffect + trendEffect);
+          
+          // 供需关系影响
+          const supply = gameState.crops[cropKey] || 0;
+          const demand = gameState.population * 0.1;
+          const supplyDemandRatio = supply / (demand + 1);
+          
+          if (supplyDemandRatio > 2) {
+            newPrice *= 0.85; // 供过于求，价格下降
+          } else if (supplyDemandRatio < 0.5) {
+            newPrice *= 1.25; // 供不应求，价格上涨
+          }
+          
+          gameState.cropPrices[cropKey] = Math.max(5, Math.round(newPrice));
+        }
+      });
+    }
+
+    // 研发系统
+    function showResearch() {
+      document.getElementById('research-modal').style.display = 'flex';
+      updateResearchContent();
+    }
+
+    function closeResearch() {
+      document.getElementById('research-modal').style.display = 'none';
+    }
+
+    function updateResearchContent() {
+      const content = document.getElementById('research-content');
+      const availableResearch = GAME_CONFIG.RESEARCH.filter(research => 
+        !gameState.completedResearch.includes(research.id)
+      );
+      
+      content.innerHTML = `
+        <div style="margin-bottom: 20px;">
+          <h3>🧪 研发点数: ${gameState.researchPoints}</h3>
+          ${gameState.ongoingResearch ? `
+            <div class="research-item in-progress">
+              <strong>正在研发: ${gameState.ongoingResearch.name}</strong><br>
+              <div class="skill-bar">
+                <div class="skill-progress" style="width: ${gameState.researchProgress}%"></div>
+              </div>
+              <small>进度: ${Math.round(gameState.researchProgress)}%</small>
+            </div>
+          ` : ''}
+        </div>
+        
+        <h4>可用研发项目:</h4>
+        ${availableResearch.map(research => `
+          <div class="research-item" onclick="startResearch('${research.id}')">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>${research.icon} ${research.name}</strong><br>
+                <small>${research.description}</small><br>
+                <small style="color: #666;">类别: ${research.category}</small>
+              </div>
+              <div style="text-align: right;">
+                <div style="color: var(--warning-color); font-weight: bold;">₿${research.cost}</div>
+                <button class="btn info-btn" style="padding: 4px 8px; font-size: 0.8em;" 
+                        ${gameState.researchPoints >= research.cost && !gameState.ongoingResearch ? '' : 'disabled'}>
+                  研发
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+        
+        <h4 style="margin-top: 20px;">已完成研发:</h4>
+        ${gameState.completedResearch.map(researchId => {
+          const research = GAME_CONFIG.RESEARCH.find(r => r.id === researchId);
+          return research ? `
+            <div class="research-item completed">
+              <strong>${research.icon} ${research.name}</strong><br>
+              <small>${research.description}</small>
+            </div>
+          ` : '';
+        }).join('') || '<p style="color: #666;">暂无完成的研发项目</p>'}
+      `;
+    }
+
+    function startResearch(researchId) {
+      if (gameState.ongoingResearch) {
+        addLog("已有正在进行的研发项目！", "warning");
+        return;
+      }
+      
+      const research = GAME_CONFIG.RESEARCH.find(r => r.id === researchId);
+      if (!research) return;
+      
+      if (gameState.researchPoints >= research.cost) {
+        gameState.researchPoints -= research.cost;
+        gameState.ongoingResearch = research;
+        gameState.researchProgress = 0;
+        
+        addLog(`开始研发：${research.name}`, "info");
+        updateResearchContent();
+        gainExperience('management', 20);
+      } else {
+        addLog("研发点数不足！", "warning");
+      }
+    }
+
+    function updateResearchProgress() {
+      if (gameState.ongoingResearch) {
+        gameState.researchProgress += 25; // 每回合25%进度
+        
+        if (gameState.researchProgress >= 100) {
+          // 研发完成
+          gameState.completedResearch.push(gameState.ongoingResearch.id);
+          gameState.ongoingResearch.effect();
+          
+          addLog(`研发完成：${gameState.ongoingResearch.name}！`, "success");
+          gameState.reputation += 15;
+          
+          gameState.ongoingResearch = null;
+          gameState.researchProgress = 0;
+        }
+      }
+    }
+
+    // 合作社系统
+    function showCoop() {
+      document.getElementById('coop-modal').style.display = 'flex';
+      updateCoopContent();
+    }
+
+    function closeCoop() {
+      document.getElementById('coop-modal').style.display = 'none';
+    }
+
+    function updateCoopContent() {
+      const content = document.getElementById('coop-content');
+      
+      content.innerHTML = `
+        <div class="coop-panel">
+          <h3>🤝 合作社系统</h3>
+          <p>加入合作社可以获得集体优势，降低成本，提高效益。</p>
+          <p><strong>当前合作效益加成：+${(gameState.coopBonus * 100).toFixed(1)}%</strong></p>
+        </div>
+        
+        <h4>可加入的合作社:</h4>
+        ${GAME_CONFIG.COOPERATIVES.map(coop => {
+          const isJoined = gameState.joinedCoops.includes(coop.id);
+          return `
+            <div class="market-item" style="background: ${isJoined ? 'rgba(76, 175, 80, 0.1)' : 'white'};">
+              <div class="market-item-info">
+                <strong>${coop.icon} ${coop.name}</strong><br>
+                <small>${coop.description}</small><br>
+                <small>成员: ${coop.members}/${coop.maxMembers} | 费用: ₹${coop.cost}</small>
+              </div>
+              <div class="market-controls">
+                ${isJoined ? 
+                  '<span style="color: var(--success-color); font-weight: bold;">已加入</span>' :
+                  `<button onclick="joinCoop('${coop.id}')" class="btn success-btn" 
+                           ${gameState.money >= coop.cost && coop.members < coop.maxMembers ? '' : 'disabled'}>
+                     加入
+                   </button>`
+                }
+              </div>
+            </div>
+          `;
+        }).join('')}
+        
+        <div style="margin-top: 20px;">
+          <h4>合作社福利:</h4>
+          <ul style="margin-left: 20px;">
+            <li>集体采购：设备成本降低</li>
+            <li>统一销售：农产品价格提升</li>
+            <li>风险分担：减少灾害损失</li>
+            <li>技术共享：获得额外研发点数</li>
+          </ul>
+        </div>
+      `;
+    }
+
+    function joinCoop(coopId) {
+      const coop = GAME_CONFIG.COOPERATIVES.find(c => c.id === coopId);
+      if (!coop) return;
+      
+      if (gameState.money >= coop.cost && coop.members < coop.maxMembers) {
+        gameState.money -= coop.cost;
+        gameState.joinedCoops.push(coopId);
+        coop.members++;
+        coop.effect();
+        
+        addLog(`加入${coop.name}成功！`, "success");
+        gameState.reputation += 10;
+        gainExperience('management', 25);
+        
+        updateCoopContent();
+        updateDisplay();
+      } else {
+        addLog("无法加入合作社：资金不足或名额已满", "warning");
+      }
+    }
+
+    // 成就系统 - 增强版
+    function checkAchievements() {
+      GAME_CONFIG.ACHIEVEMENTS.forEach(achievement => {
+        if (!gameState.achievements.includes(achievement.id) && achievement.condition()) {
+          gameState.achievements.push(achievement.id);
+          
+          // 给予奖励
+          if (achievement.reward) {
+            if (achievement.reward.money) {
+              gameState.money += achievement.reward.money;
+            }
+            if (achievement.reward.reputation) {
+              gameState.reputation += achievement.reward.reputation;
+            }
+            if (achievement.reward.researchPoints) {
+              gameState.researchPoints += achievement.reward.researchPoints;
+            }
+          }
+          
+          addLog(`🏆 获得成就：${achievement.name}！`, "success");
+          
+          // 特殊效果
+          if (achievement.type === "hidden") {
+            addLog("这是一个隐藏成就！", "info");
+          }
+        }
+      });
+    }
+
+    function updateAchievementPanel() {
+      const panel = document.getElementById('achievement-panel');
+      
+      if (gameState.achievements.length === 0) {
+        panel.innerHTML = '<p style="color: #666; text-align: center;">暂无成就</p>';
+        return;
+      }
+      
+      // 按类型分组显示成就
+      const achievementsByType = {};
+      GAME_CONFIG.ACHIEVEMENTS.forEach(achievement => {
+        if (!achievementsByType[achievement.type]) {
+          achievementsByType[achievement.type] = [];
+        }
+        achievementsByType[achievement.type].push(achievement);
+      });
+      
+      let html = '';
+      Object.keys(achievementsByType).forEach(type => {
+        const typeAchievements = achievementsByType[type];
+        const unlockedCount = typeAchievements.filter(a => gameState.achievements.includes(a.id)).length;
+        const totalCount = typeAchievements.length;
+        
+        html += `<div style="margin-bottom: 10px;">
+          <h5>${type} (${unlockedCount}/${totalCount})</h5>
+        </div>`;
+        
+        typeAchievements.forEach(achievement => {
+          const isUnlocked = gameState.achievements.includes(achievement.id);
+          const itemClass = isUnlocked ? 'achievement-item unlocked' : 'achievement-item locked';
+          
+          html += `
+            <div class="${itemClass}">
+              <div class="achievement-icon">${achievement.icon}</div>
+              <div class="achievement-info">
+                <div class="achievement-name">${achievement.name}</div>
+                <div class="achievement-desc">${achievement.description}</div>
+                ${achievement.reward ? `<small style="color: var(--success-color);">奖励: ${Object.entries(achievement.reward).map(([key, value]) => `${key}: ${value}`).join(', ')}</small>` : ''}
+              </div>
+            </div>
+          `;
+        });
+      });
+      
+      panel.innerHTML = html;
+    }
+
+    // 更新地图显示
+    function updateMapDisplay(weatherEvent) {
+      const overlay = document.getElementById('map-overlay');
+      const satelliteOverlay = document.getElementById('satellite-overlay');
+      
+      overlay.textContent = `${weatherEvent.icon} ${weatherEvent.type}`;
+      
+      // 清除旧的效果
+      satelliteOverlay.className = 'satellite-overlay';
+      
+      // 添加新的视觉效果
+      if (weatherEvent.type === '洪水') {
+        satelliteOverlay.classList.add('flood-effect');
+      } else if (weatherEvent.type.includes('干旱')) {
+        satelliteOverlay.classList.add('drought-effect');
+      }
+      
+      // 添加粒子效果
+      createParticleEffect(weatherEvent.type);
+    }
+
+    // 创建粒子效果
+    function createParticleEffect(weatherType) {
+      const particleContainer = document.getElementById('particles');
+      particleContainer.innerHTML = '';
+      
+      let particleCount = 0;
+      let emoji = '';
+      let duration = 3000;
+      
+      switch(weatherType) {
+        case '洪水':
+          particleCount = 25;
+          emoji = '💧';
+          duration = 3000;
+          break;
+        case '延迟干旱':
+        case '严重干旱':
+          particleCount = 20;
+          emoji = '☀️';
+          duration = 4000;
+          break;
+        case '病虫害':
+          particleCount = 15;
+          emoji = '🐛';
+          duration = 2500;
+          break;
+        case '台风':
+          particleCount = 30;
+          emoji = '🌪️';
+          duration = 2000;
+          break;
+        case '霜冻':
+          particleCount = 20;
+          emoji = '❄️';
+          duration = 3500;
+          break;
+      }
+      
+      for (let i = 0; i < particleCount; i++) {
+        createParticle(particleContainer, emoji, duration);
+      }
+    }
+
+    function createParticle(container, emoji, duration) {
+      const particle = document.createElement('div');
+      particle.textContent = emoji;
+      particle.style.position = 'absolute';
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.fontSize = (1 + Math.random()) + 'em';
+      particle.style.animation = `particleFloat ${duration}ms linear`;
+      particle.style.animationDelay = Math.random() * 1000 + 'ms';
+      container.appendChild(particle);
+      
+      setTimeout(() => {
+        if (particle.parentNode) {
+          particle.parentNode.removeChild(particle);
+        }
+      }, duration + 1000);
+    }
+
+    // 更新人口 - 增强版
+    function updatePopulation() {
+      // 人口自然增长
+      const growthRate = 1.02 + (gameState.reputation / 5000);
+      gameState.population = Math.round(gameState.population * growthRate);
+      
+      // 粮食消耗
+      const grainNeeded = Math.ceil(gameState.population * 0.35);
+      let totalGrain = gameState.crops.wheat + gameState.crops.rice + 
+                       gameState.crops.corn + gameState.crops.sorghum;
+      
+      if (totalGrain >= grainNeeded) {
+        // 按比例消耗粮食
+        const consumptionRatio = grainNeeded / totalGrain;
+        gameState.crops.wheat = Math.round(gameState.crops.wheat * (1 - consumptionRatio));
+        gameState.crops.rice = Math.round(gameState.crops.rice * (1 - consumptionRatio));
+        gameState.crops.corn = Math.round(gameState.crops.corn * (1 - consumptionRatio));
+        gameState.crops.sorghum = Math.round(gameState.crops.sorghum * (1 - consumptionRatio));
+        
+        // 人口满意度提升
+        gameState.reputation += 1;
+      } else {
+        // 粮食不足，人口减少
+        const deficit = grainNeeded - totalGrain;
+        const populationLoss = Math.min(deficit * 2, gameState.population * 0.1);
+        gameState.population = Math.max(50, gameState.population - populationLoss);
+        
+        // 清空粮食储备
+        gameState.crops.wheat = 0;
+        gameState.crops.rice = 0;
+        gameState.crops.corn = 0;
+        gameState.crops.sorghum = 0;
+        
+        // 声望下降
+        gameState.reputation = Math.max(0, gameState.reputation - 5);
+        
+        addLog(`粮食不足！人口减少${Math.round(populationLoss)}人`, "error");
+      }
+    }
+
+    // 市场系统
+    function showMarket() {
+      document.getElementById('market-modal').style.display = 'flex';
+      updateMarketContent();
+    }
+
+    function closeMarket() {
+      document.getElementById('market-modal').style.display = 'none';
+    }
+
+    function updateMarketContent() {
+      const content = document.getElementById('market-content');
+      content.innerHTML = `
+        <div style="text-align: left;">
+          <h3>📈 市场行情</h3>
+          ${gameState.marketInsight ? '<p style="color: var(--info-color);">💡 您拥有市场洞察能力，可以预测价格趋势</p>' : ''}
+          <div style="margin: 15px 0;">
+            <h4>🏪 出售农产品</h4>
+            ${Object.keys(gameState.crops).map(cropKey => {
+              const cropName = getCropName(cropKey);
+              const price = gameState.cropPrices[cropKey];
+              const quantity = gameState.crops[cropKey];
+              
+              // 市场洞察：显示价格趋势
+              let trendIndicator = '';
+              if (gameState.marketInsight) {
+                const trend = Math.sin((gameState.year + 1) * 0.2) - Math.sin(gameState.year * 0.2);
+                if (trend > 0.05) trendIndicator = ' 📈';
+                else if (trend < -0.05) trendIndicator = ' 📉';
+                else trendIndicator = ' ➡️';
+              }
+              
+              return `
+                <div class="market-item">
+                  <div class="market-item-info">
+                    <strong>${cropName}</strong>${trendIndicator}<br>
+                    <small>库存: ${quantity} | 市场价: ₹${price}</small>
+                  </div>
+                  <div class="market-controls">
+                    <input type="number" class="market-input" id="sell-${cropKey}" 
+                           min="0" max="${quantity}" value="0">
+                    <button onclick="sellCrop('${cropKey}')" class="btn success-btn" 
+                            style="padding: 5px 10px;" ${quantity > 0 ? '' : 'disabled'}>出售</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          
+          <div style="margin: 15px 0;">
+            <h4>🛒 购买农产品</h4>
+            <p style="font-size: 0.9em; color: #666;">从市场购买农产品以补充库存（价格为市价的120%）</p>
+            ${Object.keys(gameState.crops).map(cropKey => {
+              const cropName = getCropName(cropKey);
+              const buyPrice = Math.round(gameState.cropPrices[cropKey] * 1.2);
+              
+              return `
+                <div class="market-item">
+                  <div class="market-item-info">
+                    <strong>${cropName}</strong><br>
+                    <small>购买价: ₹${buyPrice}</small>
+                  </div>
+                  <div class="market-controls">
+                    <input type="number" class="market-input" id="buy-${cropKey}" 
+                           min="0" value="0">
+                    <button onclick="buyCrop('${cropKey}')" class="btn warning-btn" 
+                            style="padding: 5px 10px;">购买</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function sellCrop(cropKey) {
+      const amount = parseInt(document.getElementById(`sell-${cropKey}`).value) || 0;
+      const available = gameState.crops[cropKey];
+      const price = gameState.cropPrices[cropKey];
+      
+      if (amount <= 0) {
+        addLog("请输入有效的出售数量！", "warning");
+        return;
+      }
+      
+      if (amount > available) {
+        addLog("库存不足！", "warning");
+        return;
+      }
+      
+      const income = amount * price;
+      gameState.money += income;
+      gameState.crops[cropKey] -= amount;
+      gameState.totalIncome += income;
+      
+      addLog(`出售${amount}单位${getCropName(cropKey)}，获得₹${income}`, "success");
+      gainExperience('market', 8);
+      gameState.reputation += Math.floor(amount / 20);
+      
+      updateMarketContent();
+      updateDisplay();
+      updateMarketPanel();
+    }
+
+    function buyCrop(cropKey) {
+      const amount = parseInt(document.getElementById(`buy-${cropKey}`).value) || 0;
+      const buyPrice = Math.round(gameState.cropPrices[cropKey] * 1.2);
+      const totalCost = amount * buyPrice;
+      
+      if (amount <= 0) {
+        addLog("请输入有效的购买数量！", "warning");
+        return;
+      }
+      
+      if (totalCost > gameState.money) {
+        addLog("资金不足！", "warning");
+        return;
+      }
+      
+      gameState.money -= totalCost;
+      gameState.crops[cropKey] += amount;
+      
+      addLog(`购买${amount}单位${getCropName(cropKey)}，花费₹${totalCost}`, "info");
+      gainExperience('market', 6);
+      
+      updateMarketContent();
+      updateDisplay();
+      updateMarketPanel();
+    }
+
+    // 贷款系统 - 增强版
+    function showLoanCenter() {
+      document.getElementById('loan-modal').style.display = 'flex';
+      updateLoanContent();
+    }
+
+    function closeLoanCenter() {
+      document.getElementById('loan-modal').style.display = 'none';
+    }
+
+    function updateLoanContent() {
+      const content = document.getElementById('loan-content');
+      const reputationDiscount = Math.min(0.3, gameState.reputation / 300);
+      
+      content.innerHTML = `
+        <div style="text-align: left;">
+          <h3>当前债务: ₹${gameState.debt}</h3>
+          ${gameState.reputation >= 100 ? `<p style="color: var(--success-color);">🌟 声望优惠：利率降低${(reputationDiscount * 100).toFixed(1)}%</p>` : ''}
+          
+          <div class="market-item">
+            <div class="market-item-info">
+              <strong>小额贷款</strong><br>
+              <small>金额: ₹800 | 利率: ${(5 * (1 - reputationDiscount)).toFixed(1)}%/年</small>
+            </div>
+            <button onclick="takeLoan(800, ${0.05 * (1 - reputationDiscount)})" class="btn warning-btn">申请贷款</button>
+          </div>
+          
+          <div class="market-item">
+            <div class="market-item-info">
+              <strong>设备贷款</strong><br>
+              <small>金额: ₹2000 | 利率: ${(8 * (1 - reputationDiscount)).toFixed(1)}%/年</small>
+            </div>
+            <button onclick="takeLoan(2000, ${0.08 * (1 - reputationDiscount)})" class="btn warning-btn">申请贷款</button>
+          </div>
+          
+          <div class="market-item">
+            <div class="market-item-info">
+              <strong>发展贷款</strong><br>
+              <small>金额: ₹5000 | 利率: ${(12 * (1 - reputationDiscount)).toFixed(1)}%/年</small>
+            </div>
+            <button onclick="takeLoan(5000, ${0.12 * (1 - reputationDiscount)})" class="btn warning-btn" 
+                    ${gameState.reputation >= 80 ? '' : 'disabled'}>申请贷款</button>
+          </div>
+          
+          <div class="market-item">
+            <div class="market-item-info">
+              <strong>还款</strong><br>
+              <small>每年利息: ₹${Math.round(gameState.debt * 0.08)}</small>
+            </div>
+            <div>
+              <button onclick="repayDebt(Math.min(1000, gameState.debt))" class="btn success-btn" 
+                      ${gameState.debt >= 1000 && gameState.money >= 1000 ? '' : 'disabled'}>
+                部分还款(₹1000)
+              </button>
+              <button onclick="repayDebt(gameState.debt)" class="btn success-btn" 
+                      ${gameState.debt > 0 && gameState.money >= gameState.debt ? '' : 'disabled'}>
+                全额还款
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function takeLoan(amount, rate) {
+      gameState.money += amount;
+      gameState.debt += amount * (1 + rate);
+      addLog(`获得贷款₹${amount}，需还款₹${Math.round(amount * (1 + rate))}`, "warning");
+      gameState.reputation = Math.max(0, gameState.reputation - 2);
+      updateDisplay();
+      updateLoanContent();
+    }
+
+    function repayDebt(amount) {
+      if (gameState.money >= amount && amount <= gameState.debt) {
+        gameState.money -= amount;
+        gameState.debt -= amount;
+        addLog(`还款₹${amount}`, "success");
+        gameState.reputation += Math.floor(amount / 500);
+        updateDisplay();
+        updateLoanContent();
+      }
+    }
+
+    // 保险系统 - 增强版
+    function showInsurance() {
+      document.getElementById('insurance-modal').style.display = 'flex';
+      updateInsuranceContent();
+    }
+
+    function closeInsurance() {
+      document.getElementById('insurance-modal').style.display = 'none';
+    }
+
+    function updateInsuranceContent() {
+      const content = document.getElementById('insurance-content');
+      const costMultiplier = gameState.insuranceCostMultiplier;
+      
+      content.innerHTML = `
+        <div style="text-align: left;">
+          <h3>保险状态: ${gameState.insurance ? '✅ 已投保' : '❌ 未投保'}</h3>
+          
+          <div class="market-item">
+            <div class="market-item-info">
+              <strong>基础农业保险</strong><br>
+              <small>保费: ₹${Math.round(300 * costMultiplier)}/年 | 保障: 灾害损失50%补偿</small>
+            </div>
+            <button onclick="buyInsurance('basic', ${Math.round(300 * costMultiplier)})" 
+                    ${gameState.insurance ? 'disabled' : ''} class="btn success-btn">
+              ${gameState.insurance ? '已投保' : '购买保险'}
+            </button>
+          </div>
+          
+          <div class="market-item">
+            <div class="market-item-info">
+              <strong>综合农业保险</strong><br>
+              <small>保费: ₹${Math.round(500 * costMultiplier)}/年 | 保障: 灾害损失70%补偿 + 价格保障</small>
+            </div>
+            <button onclick="buyInsurance('comprehensive', ${Math.round(500 * costMultiplier)})" 
+                    ${gameState.comprehensiveInsurance ? 'disabled' : ''} class="btn info-btn">
+              ${gameState.comprehensiveInsurance ? '已投保' : '购买保险'}
+            </button>
+          </div>
+          
+          <div class="market-item">
+            <div class="market-item-info">
+              <strong>设备保险</strong><br>
+              <small>保费: ₹${Math.round(400 * costMultiplier)}/年 | 保障: 设备损坏全额赔偿</small>
+            </div>
+            <button onclick="buyInsurance('equipment', ${Math.round(400 * costMultiplier)})" 
+                    ${gameState.equipmentInsurance ? 'disabled' : ''} class="btn warning-btn">
+              ${gameState.equipmentInsurance ? '已投保' : '购买保险'}
+            </button>
+          </div>
+          
+          <p><small>保险可以在遭受自然灾害时获得损失补偿，降低经营风险。合作社成员享受保费优惠。</small></p>
+        </div>
+      `;
+    }
+
+    function buyInsurance(type, cost) {
+      if (gameState.money >= cost) {
+        gameState.money -= cost;
+        
+        switch(type) {
+          case 'basic':
+            gameState.insurance = true;
+            addLog("购买基础农业保险成功", "success");
+            break;
+          case 'comprehensive':
+            gameState.comprehensiveInsurance = true;
+            addLog("购买综合农业保险成功", "success");
+            break;
+          case 'equipment':
+            gameState.equipmentInsurance = true;
+            addLog("购买设备保险成功", "success");
+            break;
+        }
+        
+        gameState.reputation += 5;
+        updateDisplay();
+        updateInsuranceContent();
+      } else {
+        addLog("资金不足！", "warning");
+      }
+    }
+
+    // 更新市场面板
+    function updateMarketPanel() {
+      const panel = document.getElementById('market-panel');
+      let html = '';
+      
+      Object.keys(gameState.crops).forEach(cropKey => {
+        const cropName = getCropName(cropKey);
+        const quantity = gameState.crops[cropKey];
+        const price = gameState.cropPrices[cropKey];
+        
+        if (quantity > 0 || price > 0) {
+          html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 5px 0; padding: 5px; background: rgba(255,255,255,0.5); border-radius: 4px;">
+              <div>
+                <strong>${cropName}</strong><br>
+                <small>库存: ${quantity}</small>
+              </div>
+              <div style="text-align: right;">
+                <strong>₹${price}</strong><br>
+                <small style="color: #666;">单价</small>
+              </div>
+            </div>
+          `;
+        }
+      });
+      
+      panel.innerHTML = html || '<p style="color: #666; text-align: center;">暂无农产品</p>';
+    }
+
+    // 更新设备面板
+    function updateEquipmentPanel() {
+      const panel = document.getElementById('equipment-panel');
+      let html = '';
+      
+      // 显示已有设备
+      if (gameState.equipment.length > 0) {
+        html += '<h5>已有设备:</h5>';
+        gameState.equipment.forEach(equipment => {
+          html += `
+            <div style="margin: 5px 0; padding: 8px; background: rgba(76, 175, 80, 0.1); border-radius: 4px; border-left: 3px solid var(--success-color);">
+              <strong>${equipment.icon} ${equipment.name}</strong><br>
+              <small>${equipment.effect}</small>
+            </div>
+          `;
+        });
+      }
+      
+      // 显示可购买设备
+      const availableEquipment = GAME_CONFIG.EQUIPMENT.filter(eq => 
+        !gameState.equipment.some(owned => owned.name === eq.name)
+      );
+      
+      if (availableEquipment.length > 0) {
+        html += '<h5 style="margin-top: 15px;">可购买设备:</h5>';
+        availableEquipment.slice(0, 3).forEach(equipment => {
+          const canAfford = gameState.money >= Math.round(equipment.cost * gameState.equipmentCostMultiplier);
+          html += `
+            <div style="margin: 5px 0; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px; opacity: ${canAfford ? '1' : '0.6'};">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong>${equipment.icon} ${equipment.name}</strong><br>
+                  <small>${equipment.effect}</small><br>
+                  <small style="color: #666;">T${equipment.tier} | ₹${Math.round(equipment.cost * gameState.equipmentCostMultiplier)}</small>
+                </div>
+                <button onclick="buyEquipment('${equipment.name}')" class="btn ${canAfford ? 'success-btn' : 'disabled'}" 
+                        style="padding: 4px 8px; font-size: 0.8em;" ${canAfford ? '' : 'disabled'}>
+                  购买
+                </button>
+              </div>
+            </div>
+          `;
+        });
+      }
+      
+      panel.innerHTML = html || '<p style="color: #666; text-align: center;">暂无设备</p>';
+    }
+
+    // 购买设备
+    function buyEquipment(equipmentName) {
+      const equipment = GAME_CONFIG.EQUIPMENT.find(eq => eq.name === equipmentName);
+      if (!equipment) return;
+      
+      const cost = Math.round(equipment.cost * gameState.equipmentCostMultiplier);
+      
+      if (gameState.money >= cost) {
+        gameState.money -= cost;
+        gameState.equipment.push(equipment);
+        
+        addLog(`购买${equipment.name}成功！`, "success");
+        gainExperience('management', 15);
+        gameState.reputation += 8;
+        
+        updateDisplay();
+        updateEquipmentPanel();
+      } else {
+        addLog("资金不足，无法购买设备！", "warning");
+      }
+    }
+
+    // 检查游戏结束条件
+    function checkGameOver() {
+      // 人口过少
+      if (gameState.population <= 25) {
+        showGameOverModal("游戏失败", "人口数量过少，无法维持社会运转！", "failure");
+        return true;
+      }
+      
+      // 债务过重
+      if (gameState.money < -3000) {
+        showGameOverModal("游戏失败", "债务过重，农场破产！", "failure");
+        return true;
+      }
+      
+      // 挑战模式胜利
+      if (gameState.gameMode === 'challenge' && gameState.year >= gameState.challengeYears) {
+        showGameOverModal("挑战成功", `恭喜！您成功经营农场${gameState.challengeYears}年！`, "success");
+        return true;
+      }
+      
+      // 极限模式特殊胜利条件
+      if (gameState.gameMode === 'extreme' && gameState.year >= 25 && gameState.reputation >= 200) {
+        showGameOverModal("传奇成就", "您在极限模式下成为了农业传奇！", "success");
+        return true;
+      }
+      
+      return false;
+    }
+
+    // 显示游戏结束弹窗
+    function showGameOverModal(title, message, status) {
+      const modal = document.getElementById('game-over-modal');
+      const modalContent = document.getElementById('modal-content');
+      const modalTitle = document.getElementById('modal-title');
+      const modalMessage = document.getElementById('modal-message');
+      
+      modal.style.display = 'flex';
+      modalContent.classList.remove('success', 'failure');
+      modalContent.classList.add(status);
+      modalTitle.textContent = title;
+      
+      const finalStats = `
+        ${message}<br><br>
+        <strong>最终统计：</strong><br>
+        💰 资金: ₹${gameState.money}<br>
+        👥 人口: ${gameState.population}<br>
+        👨‍🌾 农民等级: ${gameState.farmerLevel}<br>
+        🌟 声望: ${gameState.reputation} (${gameState.reputationLevel})<br>
+        💵 总收入: ₹${gameState.totalIncome}<br>
+        📊 收获次数: ${gameState.totalHarvests}<br>
+        🏆 成就数量: ${gameState.achievements.length}/${GAME_CONFIG.ACHIEVEMENTS.length}<br>
+        🔬 完成研发: ${gameState.completedResearch.length}/${GAME_CONFIG.RESEARCH.length}<br>
+        🤝 加入合作社: ${gameState.joinedCoops.length}/${GAME_CONFIG.COOPERATIVES.length}
+      `;
+      
+      modalMessage.innerHTML = finalStats;
+    }
+
+    // 更新历史显示
+    function updateHistoryDisplay() {
+      const tbody = document.getElementById('history-body');
+      const recentHistory = gameState.history.slice(-10).reverse();
+      
+      tbody.innerHTML = recentHistory.map(record => `
+        <tr>
+          <td>${record.year}</td>
+          <td>${record.weather}</td>
+          <td>₹${record.income}</td>
+          <td>${record.crop}</td>
+        </tr>
+      `).join('');
+    }
+
+    // 更新主界面显示
+    function updateDisplay() {
+      document.getElementById('money').textContent = gameState.money;
+      document.getElementById('current-population').textContent = gameState.population;
+      document.getElementById('current-year').textContent = gameState.year;
+      document.getElementById('climate-risk').textContent = Math.round(gameState.climateRisk);
+      document.getElementById('farmer-level').textContent = gameState.farmerLevel;
+      document.getElementById('current-season').textContent = GAME_CONFIG.SEASONS[gameState.season];
+      document.getElementById('reputation').textContent = gameState.reputation;
+      document.getElementById('research-points').textContent = gameState.researchPoints;
+      
+      updateSkillDisplay();
+      updateReputationLevel();
+    }
+
+    // 日志系统
+    function addLog(message, type = 'info') {
+      const logContainer = document.getElementById('log-container');
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry ${type}`;
+      logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      
+      logContainer.appendChild(logEntry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+      
+      // 限制日志条数
+      while (logContainer.children.length > 50) {
+        logContainer.removeChild(logContainer.firstChild);
+      }
+    }
+
+    // 重新开始游戏
+    function restartGame() {
+      // 重置游戏状态
+      gameState = {
+        money: 2000,
+        population: 200,
+        year: 1,
+        season: 0,
+        farmerLevel: 1,
+        currentCrop: null,
+        crops: {
+          wheat: 200,
+          rice: 0,
+          corn: 0,
+          sorghum: 0,
+          cotton: 0,
+          tea: 0,
+          sugarcane: 0,
+          rubber: 0,
+          coffee: 0,
+          cocoa: 0
+        },
+        cropPrices: {},
+        cropsPlanted: {},
+        equipment: [],
+        currentPolicy: null,
+        policyDuration: 0,
+        gameMode: 'tutorial',
+        difficulty: 50,
+        challengeYears: 20,
+        birthplace: 'china-north',
+        totalHarvests: 0,
+        totalIncome: 0,
+        consecutiveWeatherSuccess: 0,
+        consecutiveNormalWeather: 0,
+        extremeWeatherSurvived: 0,
+        perfectYears: 0,
+        maxSingleProfit: 0,
+        history: [],
+        achievements: [],
+        plantingExp: 0,
+        managementExp: 0,
+        marketExp: 0,
+        plantingLevel: 1,
+        managementLevel: 1,
+        marketLevel: 1,
+        debt: 0,
+        insurance: false,
+        reputation: 50,
+        reputationLevel: "新手农民",
+        researchPoints: 0,
+        completedResearch: [],
+        ongoingResearch: null,
+        researchProgress: 0,
+        joinedCoops: [],
+        coopBonus: 0,
+        droughtResistance: 0,
+        pestResistance: 0,
+        yieldBonus: 0,
+        soilQuality: 0,
+        automation: 0,
+        climateAdaptation: 0,
+        marketInsight: false,
+        weatherPrediction: false,
+        nextWeatherEvent: null,
+        incomeMultiplier: 1,
+        equipmentCostMultiplier: 1,
+        insuranceCostMultiplier: 1,
+        grainPriceBonus: 0,
+        climateRisk: 30,
+        riskTakingSuccess: false,
+        comebackSuccess: false
+      };
+      
+      // 重置教程
+      currentTutorialStep = 0;
+      
+      // 重置界面
+      initializePrices();
+      updateDisplay();
+      updateMarketPanel();
+      updateEquipmentPanel();
+      updateAchievementPanel();
+      
+      document.getElementById('game-over-modal').style.display = 'none';
+      document.getElementById('mode-selection-modal').style.display = 'flex';
+      document.getElementById('current-crop-display').textContent = '无';
+      document.getElementById('history-body').innerHTML = '';
+      document.getElementById('log-container').innerHTML = '';
+      document.getElementById('policy-effect').style.display = 'none';
+      
+      // 清除作物选择状态
+      document.querySelectorAll('.crop-button').forEach(btn => {
+        btn.classList.remove('selected');
+      });
+      
+      addLog("游戏重置，欢迎再次体验增强版！", "success");
+    }
+
+    // 导出战绩系统 - 大幅增强
+    function exportScore() {
+      document.getElementById('export-score-modal').style.display = 'flex';
+    }
+
+    function closeExportModal() {
+      document.getElementById('export-score-modal').style.display = 'none';
+    }
+
+    // 导出图片
+    function exportScoreImage() {
+      const playerName = document.getElementById('player-name').value || '匿名玩家';
+      
+      // 创建canvas
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 1200;
+      canvas.height = 1000;
+      
+      // 绘制背景
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#667eea');
+      gradient.addColorStop(0.5, '#764ba2');
+      gradient.addColorStop(1, '#f093fb');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // 添加装饰边框
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+      
+      // 绘制标题
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 52px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('🌦️ 季风决策者 - 增强版', canvas.width / 2, 100);
+      
+      // 绘制副标题
+      ctx.font = '28px Arial';
+      ctx.fillText('农业管理成就报告', canvas.width / 2, 140);
+      
+      // 绘制玩家信息
+      ctx.font = 'bold 36px Arial';
+      ctx.fillText(`农场主：${playerName}`, canvas.width / 2, 200);
+      
+      // 绘制游戏数据
+      ctx.font = '24px Arial';
+      ctx.textAlign = 'left';
+      const leftStats = [
+        `🎮 游戏模式：${gameState.gameMode}`,
+        `📊 难度等级：${gameState.difficulty}%`,
+        `🌍 出生地：${gameState.birthplace}`,
+        `📅 经营年数：${gameState.year}年`,
+        `💰 最终资金：₹${gameState.money}`,
+        `👥 最终人口：${gameState.population}人`,
+        `👨‍🌾 农民等级：${gameState.farmerLevel}级`,
+        `🌟 声望等级：${gameState.reputationLevel}`,
+        `💵 总收入：₹${gameState.totalIncome}`,
+        `📊 收获次数：${gameState.totalHarvests}次`
+      ];
+      
+      const rightStats = [
+        `🔬 完成研发：${gameState.completedResearch.length}/${GAME_CONFIG.RESEARCH.length}`,
+        `🤝 加入合作社：${gameState.joinedCoops.length}`,
+        `⚡ 连续成功：${gameState.consecutiveWeatherSuccess}年`,
+        `🌪️ 极端天气：${gameState.extremeWeatherSurvived}次`,
+        `💎 最大收益：₹${gameState.maxSingleProfit}`,
+        `🔧 拥有设备：${gameState.equipment.length}件`,
+        `🏆 获得成就：${gameState.achievements.length}/${GAME_CONFIG.ACHIEVEMENTS.length}`,
+        `🧪 研发点数：${gameState.researchPoints}`,
+        `⭐ 声望值：${gameState.reputation}`,
+        `📈 完美年份：${gameState.perfectYears}年`
+      ];
+      
+      // 绘制左列数据
+      leftStats.forEach((stat, index) => {
+        ctx.fillText(stat, 80, 280 + index * 35);
+      });
+      
+      // 绘制右列数据
+      rightStats.forEach((stat, index) => {
+        ctx.fillText(stat, 620, 280 + index * 35);
+      });
+      
+      // 绘制成就区域
+      ctx.font = 'bold 32px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('🏆 主要成就', canvas.width / 2, 680);
+      
+      ctx.font = '20px Arial';
+      ctx.textAlign = 'left';
+      const majorAchievements = gameState.achievements
+        .map(id => GAME_CONFIG.ACHIEVEMENTS.find(a => a.id === id))
+        .filter(a => a && (a.type === 'legendary' || a.type === 'special'))
+        .slice(0, 6);
+      
+      if (majorAchievements.length > 0) {
+        majorAchievements.forEach((achievement, index) => {
+          const col = index % 2;
+          const row = Math.floor(index / 2);
+          const x = col === 0 ? 80 : 620;
+          const y = 720 + row * 35;
+          ctx.fillText(`${achievement.icon} ${achievement.name}`, x, y);
+        });
+      } else {
+        ctx.textAlign = 'center';
+        ctx.fillText('尚未获得重大成就', canvas.width / 2, 720);
+      }
+      
+      // 绘制底部信息
+      ctx.font = '18px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`导出时间：${new Date().toLocaleString()}`, canvas.width / 2, 920);
+      ctx.fillText('感谢您游玩季风决策者增强版！', canvas.width / 2, 950);
+      
+      // 下载图片
+      const link = document.createElement('a');
+      link.download = `季风决策者增强版-战绩-${playerName}-${new Date().toLocaleDateString()}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+      
+      closeExportModal();
+      addLog("战绩图片导出成功！", "success");
+    }
+
+    // 导出JSON数据
+    function exportScoreJSON() {
+      const playerName = document.getElementById('player-name').value || '匿名玩家';
+      
+      const exportData = {
+        version: "增强版",
+        playerName: playerName,
+        exportTime: new Date().toISOString(),
+        gameState: { ...gameState },
+        summary: {
+          totalPlayTime: `${gameState.year}年`,
+          finalScore: calculateFinalScore(),
+          grade: calculateGrade(),
+          completionRate: {
+            achievements: `${gameState.achievements.length}/${GAME_CONFIG.ACHIEVEMENTS.length}`,
+            research: `${gameState.completedResearch.length}/${GAME_CONFIG.RESEARCH.length}`,
+            cooperatives: `${gameState.joinedCoops.length}/${GAME_CONFIG.COOPERATIVES.length}`
+          }
+        },
+        statistics: {
+          economicStats: {
+            totalIncome: gameState.totalIncome,
+            maxSingleProfit: gameState.maxSingleProfit,
+            finalWealth: gameState.money,
+            debtHistory: gameState.debt
+          },
+          agriculturalStats: {
+            totalHarvests: gameState.totalHarvests,
+            cropsPlanted: Object.keys(gameState.cropsPlanted || {}).length,
+            equipmentOwned: gameState.equipment.length,
+            farmerLevel: gameState.farmerLevel
+          },
+          socialStats: {
+            finalPopulation: gameState.population,
+            reputation: gameState.reputation,
+            reputationLevel: gameState.reputationLevel,
+            cooperativesJoined: gameState.joinedCoops.length
+          },
+          survivalStats: {
+            extremeWeatherSurvived: gameState.extremeWeatherSurvived,
+            consecutiveSuccesses: gameState.consecutiveWeatherSuccess,
+            perfectYears: gameState.perfectYears
+          }
+        },
+        achievements: gameState.achievements.map(id => {
+          const achievement = GAME_CONFIG.ACHIEVEMENTS.find(a => a.id === id);
+          return achievement ? {
+            id: achievement.id,
+            name: achievement.name,
+            type: achievement.type,
+            description: achievement.description
+          } : null;
+        }).filter(a => a),
+        research: gameState.completedResearch.map(id => {
+          const research = GAME_CONFIG.RESEARCH.find(r => r.id === id);
+          return research ? {
+            id: research.id,
+            name: research.name,
+            category: research.category,
+            description: research.description
+          } : null;
+        }).filter(r => r)
+      };
+      
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `季风决策者增强版-数据-${playerName}-${new Date().toLocaleDateString()}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      
+      closeExportModal();
+      addLog("游戏数据导出成功！", "success");
+    }
+
+    // 导出详细报告
+    function exportDetailedReport() {
+      const playerName = document.getElementById('player-name').value || '匿名玩家';
+      
+      const report = `
+# 季风决策者增强版 - 详细游戏报告
+
+**农场主**: ${playerName}
+**报告生成时间**: ${new Date().toLocaleString()}
+
+## 🎮 游戏概况
+- **游戏模式**: ${gameState.gameMode}
+- **难度等级**: ${gameState.difficulty}%
+- **出生地**: ${gameState.birthplace}
+- **经营年数**: ${gameState.year}年
+- **最终评级**: ${calculateGrade()}
+- **综合得分**: ${calculateFinalScore()}分
+
+## 💰 经济数据
+- **最终资金**: ₹${gameState.money}
+- **总收入**: ₹${gameState.totalIncome}
+- **单次最大收益**: ₹${gameState.maxSingleProfit}
+- **当前债务**: ₹${gameState.debt}
+- **平均年收入**: ₹${Math.round(gameState.totalIncome / gameState.year)}
+
+## 🌾 农业数据
+- **总收获次数**: ${gameState.totalHarvests}
+- **农民等级**: ${gameState.farmerLevel}级
+- **种植经验**: ${gameState.plantingExp}
+- **管理经验**: ${gameState.managementExp}
+- **市场经验**: ${gameState.marketExp}
+- **拥有设备**: ${gameState.equipment.length}件
+- **种植作物种类**: ${Object.keys(gameState.cropsPlanted || {}).length}种
+
+## 👥 社会数据
+- **最终人口**: ${gameState.population}人
+- **声望值**: ${gameState.reputation}
+- **声望等级**: ${gameState.reputationLevel}
+- **加入合作社**: ${gameState.joinedCoops.length}个
+
+## 🌪️ 生存数据
+- **度过极端天气**: ${gameState.extremeWeatherSurvived}次
+- **连续成功年数**: ${gameState.consecutiveWeatherSuccess}年
+- **完美经营年数**: ${gameState.perfectYears}年
+- **连续正常天气**: ${gameState.consecutiveNormalWeather}年
+
+## 🔬 科技发展
+- **研发点数**: ${gameState.researchPoints}
+- **完成研发项目**: ${gameState.completedResearch.length}/${GAME_CONFIG.RESEARCH.length}
+- **研发完成率**: ${((gameState.completedResearch.length / GAME_CONFIG.RESEARCH.length) * 100).toFixed(1)}%
+
+### 已完成研发:
+${gameState.completedResearch.map(id => {
+  const research = GAME_CONFIG.RESEARCH.find(r => r.id === id);
+  return research ? `- ${research.name}: ${research.description}` : '';
+}).join('\n')}
+
+## 🏆 成就系统
+- **获得成就**: ${gameState.achievements.length}/${GAME_CONFIG.ACHIEVEMENTS.length}
+- **成就完成率**: ${((gameState.achievements.length / GAME_CONFIG.ACHIEVEMENTS.length) * 100).toFixed(1)}%
+
+### 已获得成就:
+${gameState.achievements.map(id => {
+  const achievement = GAME_CONFIG.ACHIEVEMENTS.find(a => a.id === id);
+  return achievement ? `- [${achievement.type}] ${achievement.name}: ${achievement.description}` : '';
+}).join('\n')}
+
+## 📊 历史记录
+### 最近10年经营记录:
+${gameState.history.slice(-10).map(record => 
+  `- 第${record.year}年: ${record.weather}, 种植${record.crop}, 收获${record.quantity}单位, 收入₹${record.income}`
+).join('\n')}
+
+## 🎯 游戏建议
+${generateGameSuggestions()}
+
+---
+*报告由季风决策者增强版自动生成*
+      `;
+      
+      const dataStr = "data:text/markdown;charset=utf-8," + encodeURIComponent(report);
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `季风决策者增强版-详细报告-${playerName}-${new Date().toLocaleDateString()}.md`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      
+      closeExportModal();
+      addLog("详细报告导出成功！", "success");
+    }
+
+    // 计算最终得分
+    function calculateFinalScore() {
+      let score = 0;
+      
+      // 基础得分
+      score += Math.min(1000, gameState.totalIncome / 100);
+      score += gameState.reputation * 2;
+      score += gameState.farmerLevel * 50;
+      score += gameState.achievements.length * 30;
+      score += gameState.completedResearch.length * 40;
+      score += gameState.year * 10;
+      
+      // 特殊加分
+      if (gameState.perfectYears >= 5) score += 200;
+      if (gameState.consecutiveWeatherSuccess >= 10) score += 300;
+      if (gameState.population >= 1000) score += 250;
+      if (gameState.money >= 10000) score += 400;
+      
+      // 难度加成
+      score *= (1 + gameState.difficulty / 200);
+      
+      return Math.round(score);
+    }
+
+    // 计算等级
+    function calculateGrade() {
+      const score = calculateFinalScore();
+      
+      if (score >= 8000) return "传奇大师 S+";
+      if (score >= 6000) return "农业专家 S";
+      if (score >= 4500) return "资深农民 A+";
+      if (score >= 3500) return "熟练农民 A";
+      if (score >= 2500) return "进阶农民 B+";
+      if (score >= 1800) return "普通农民 B";
+      if (score >= 1200) return "初级农民 C+";
+      if (score >= 800) return "新手农民 C";
+      return "学徒农民 D";
+    }
+
+    // 生成游戏建议
+    function generateGameSuggestions() {
+      const suggestions = [];
+      
+      if (gameState.achievements.length < GAME_CONFIG.ACHIEVEMENTS.length * 0.5) {
+        suggestions.push("尝试解锁更多成就，包括隐藏成就！");
+      }
+      
+      if (gameState.completedResearch.length < GAME_CONFIG.RESEARCH.length * 0.6) {
+        suggestions.push("加强科技研发，提升农场技术水平。");
+      }
+      
+      if (gameState.joinedCoops.length === 0) {
+        suggestions.push("考虑加入合作社，获得集体优势。");
+      }
+      
+      if (gameState.reputation < 150) {
+        suggestions.push("提升声望可以获得更多优惠和机会。");
+      }
+      
+      if (gameState.farmerLevel < 20) {
+        suggestions.push("继续提升农民技能等级，解锁更多能力。");
+      }
+      
+      if (gameState.difficulty < 75) {
+        suggestions.push("尝试更高难度，挑战自己的极限！");
+      }
+      
+      return suggestions.length > 0 ? suggestions.join('\n') : "您已经是一位出色的农民，继续保持！";
+    }
+
+    // 备份游戏数据
+    function backupGameData() {
+      const playerName = document.getElementById('player-name').value || '匿名玩家';
+      
+      const backupData = {
+        version: "增强版",
+        backupTime: new Date().toISOString(),
+        playerName: playerName,
+        gameState: { ...gameState }
+      };
+      
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `季风决策者增强版-存档-${playerName}-${new Date().toLocaleDateString()}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      
+      closeExportModal();
+      addLog("游戏存档备份成功！", "success");
+    }
+
+    // 恢复游戏数据
+    function restoreGameData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const backupData = JSON.parse(e.target.result);
+          
+          if (backupData.version && backupData.gameState) {
+            // 恢复游戏状态
+            Object.assign(gameState, backupData.gameState);
+            
+            // 更新显示
+            updateDisplay();
+            updateMarketPanel();
+            updateEquipmentPanel();
+            updateAchievementPanel();
+            updateHistoryDisplay();
+            
+            // 更新作物选择显示
+            if (gameState.currentCrop) {
+              document.getElementById('current-crop-display').textContent = gameState.currentCrop;
+              document.querySelectorAll('.crop-button').forEach(btn => {
+                btn.classList.remove('selected');
+              });
+              const selectedBtn = document.querySelector(`[data-crop="${gameState.currentCrop}"]`);
+              if (selectedBtn) selectedBtn.classList.add('selected');
+            }
+            
+            closeExportModal();
+            addLog(`游戏存档恢复成功！欢迎回来，${backupData.playerName || '农场主'}！`, "success");
+          } else {
+            addLog("存档文件格式错误！", "error");
+          }
+        } catch (error) {
+          addLog("存档文件读取失败！", "error");
+          console.error("恢复存档错误:", error);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // 页面加载完成后初始化
+    window.addEventListener('load', function() {
+      initializePrices();
+      updateDisplay();
+      updateMarketPanel();
+      updateEquipmentPanel();
+      updateAchievementPanel();
+      updateSeasonEffect();
+    });
+  </script>
+</body>
+
+</html>
